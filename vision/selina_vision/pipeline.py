@@ -39,12 +39,13 @@ FACE_DETECTOR_MODEL_PATH = os.environ.get(
 BLUR_VARIANCE_THRESHOLD = 100.0   # below this, the image is treated as too blurry
 DARK_MEAN_THRESHOLD = 40.0        # below this, the image is treated as too dark
 BRIGHT_MEAN_THRESHOLD = 220.0     # above this, treated as blown out
-MOTION_FLAG_THRESHOLD = 1.5       # mean optical flow magnitude that counts as notable
-# Calibrated against tests/make_sample_data.py: a calm clip with a 10 frame
-# camera shake burst measures a mean magnitude around 2.0 to 2.5 across the
-# whole clip. Recalibrate this against real device footage before relying
-# on it for the actual demo, synthetic motion is a reasonable proxy, not a
-# substitute for testing on a real phone clip.
+MOTION_FLAG_THRESHOLD = 4.0        # peak mean pixel difference that counts as notable
+# Based on simple frame differencing, not optical flow, see analyze_motion
+# for why. Calibrated against tests/make_sample_data.py's deterministic
+# shake burst: ambient frames there measure 0.4 to 2.9, the burst frames
+# measure 5.2 to 7.1, a clear gap with this threshold sitting in the
+# middle of it. Recalibrate against real phone footage before the actual
+# demo, synthetic motion is a reasonable proxy, not a substitute.
 
 
 @dataclass
@@ -65,6 +66,7 @@ class FaceBlurResult:
 class MotionReport:
     flagged: bool
     mean_motion: float
+    peak_magnitude: float = 0.0
     peak_frame_index: Optional[int] = None
 
 
@@ -133,7 +135,14 @@ def blur_faces(image: np.ndarray, output_path: str) -> FaceBlurResult:
 def analyze_motion(video_path: str) -> MotionReport:
     """Scan a short clip for sudden or repeated movement. This is a
     prioritization signal for human review, not a claim about what
-    happened, and it is described that way anywhere it surfaces."""
+    happened, and it is described that way anywhere it surfaces.
+
+    Uses simple frame differencing rather than optical flow. Optical flow
+    (Farneback) is built to track smooth, small to moderate motion, an
+    abrupt shake or sudden jolt produces a displacement too large for it
+    to track well, and it can under-report exactly the thing we're trying
+    to catch. Frame differencing has no such blind spot, a sudden change
+    shows up directly as a large pixel difference."""
     cap = cv2.VideoCapture(video_path)
     ok, prev = cap.read()
     if not ok:
@@ -141,10 +150,10 @@ def analyze_motion(video_path: str) -> MotionReport:
         return MotionReport(False, 0.0)
 
     prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-    magnitudes = []
+    diffs = []
     frame_index = 0
     peak_frame_index = 0
-    peak_magnitude = 0.0
+    peak_diff = 0.0
 
     while True:
         ok, frame = cap.read()
@@ -152,24 +161,24 @@ def analyze_motion(video_path: str) -> MotionReport:
             break
         frame_index += 1
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        flow = cv2.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-        magnitude, _ = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-        mean_mag = float(np.mean(magnitude))
-        magnitudes.append(mean_mag)
-        if mean_mag > peak_magnitude:
-            peak_magnitude = mean_mag
+        diff = cv2.absdiff(prev_gray, gray)
+        mean_diff = float(np.mean(diff))
+        diffs.append(mean_diff)
+        if mean_diff > peak_diff:
+            peak_diff = mean_diff
             peak_frame_index = frame_index
         prev_gray = gray
 
     cap.release()
 
-    if not magnitudes:
+    if not diffs:
         return MotionReport(False, 0.0)
 
-    mean_motion = float(np.mean(magnitudes))
+    mean_motion = float(np.mean(diffs))
     return MotionReport(
-        flagged=mean_motion > MOTION_FLAG_THRESHOLD,
+        flagged=peak_diff > MOTION_FLAG_THRESHOLD,
         mean_motion=mean_motion,
+        peak_magnitude=peak_diff,
         peak_frame_index=peak_frame_index,
     )
 
