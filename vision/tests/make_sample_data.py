@@ -1,11 +1,18 @@
 """
 Builds small synthetic test files so the pipeline can be run and verified
 without any real photos or incident footage. Run this before test_pipeline.py.
+
+Seeded for reproducibility, without this the motion burst and noise differ
+on every run, which can push the motion signal on either side of the flag
+threshold unpredictably. A fixed seed means the same result every time,
+this environment or any other.
 """
 
 import cv2
 import numpy as np
 from pathlib import Path
+
+np.random.seed(42)
 
 OUT = Path(__file__).parent.parent / "sample_data"
 OUT.mkdir(exist_ok=True)
@@ -71,8 +78,11 @@ def make_motion_video():
         if frame_num < 15:
             dx, dy = 0, 0
         elif frame_num < 25:
-            dx = np.random.randint(-40, 40)
-            dy = np.random.randint(-40, 40)
+            # Deterministic alternating shake: every frame in the burst
+            # jumps hard between two extremes, guaranteeing a large
+            # frame-to-frame difference every single transition, rather
+            # than hoping random draws happen to land far apart.
+            dx, dy = (60, 60) if frame_num % 2 == 0 else (-60, -60)
         else:
             dx, dy = 0, 0
 
