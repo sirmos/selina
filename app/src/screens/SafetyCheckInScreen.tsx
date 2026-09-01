@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSelinaState } from "../state/SelinaState";
 import { reportMissedCheckIn } from "../services/api";
@@ -24,6 +25,12 @@ export default function SafetyCheckInScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (status === "counting" && secondsLeft === 0) {
+      handleMissed();
+    }
+  }, [secondsLeft, status]);
+
   function startCheckIn() {
     setStatus("counting");
     setCheckInStatus("scheduled");
@@ -33,7 +40,6 @@ export default function SafetyCheckInScreen() {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
-          handleMissed();
           return 0;
         }
         return prev - 1;
@@ -72,6 +78,9 @@ export default function SafetyCheckInScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.iconCircle}>
+        <Feather name="shield" size={22} color={colors.teal} />
+      </View>
       <Text style={styles.title}>Evening walk</Text>
       <Text style={styles.subtitle}>
         Selina checks in once, at the time you choose. If you don't respond, your contact is
@@ -128,6 +137,15 @@ export default function SafetyCheckInScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, padding: space.lg, paddingTop: space.xxl },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.tealSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: space.md,
+  },
   title: { fontFamily: type.display, fontSize: 26, color: colors.ink },
   subtitle: {
     fontFamily: type.body,

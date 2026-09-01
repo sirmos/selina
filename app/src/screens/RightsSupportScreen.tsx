@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, FlatList, Pressable, TextInput, StyleSheet, ActivityIndicator } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSelinaState } from "../state/SelinaState";
 import { submitCaseEntry } from "../services/api";
@@ -34,6 +35,9 @@ export default function RightsSupportScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.iconCircle}>
+        <Feather name="file-text" size={22} color={colors.rose} />
+      </View>
       <Text style={styles.title}>Your case</Text>
       <Text style={styles.subtitle}>
         A private record of what's been agreed and what's actually happened, in case you need
@@ -89,6 +93,15 @@ export default function RightsSupportScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, padding: space.lg, paddingTop: space.xl },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.roseSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: space.md,
+  },
   title: { fontFamily: type.display, fontSize: 24, color: colors.ink },
   subtitle: {
     fontFamily: type.body,

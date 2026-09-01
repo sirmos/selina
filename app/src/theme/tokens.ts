@@ -8,9 +8,13 @@ export const colors = {
   paper: "#FBF6EE",       // warm background, close but distinct from generic cream
   ink: "#20242B",         // near-black text, slightly warm
   inkSoft: "#565B66",     // secondary text
-  teal: "#1F5C52",        // primary brand color, calm and grounded
+  teal: "#1F5C52",        // safety, and the primary brand color
   tealDeep: "#153E38",    // pressed / active state
-  rose: "#B5566B",        // single warm accent, used sparingly (alerts, highlights)
+  tealSoft: "#E4EFEC",    // soft tint for safety icon backgrounds
+  rose: "#B5566B",        // rights and support, and alerts
+  roseSoft: "#F5E6E9",    // soft tint for rights icon backgrounds
+  amber: "#A87428",       // companion, warmth without reaching for pink cliche
+  amberSoft: "#F3E9D8",   // soft tint for companion icon backgrounds
   line: "#E4DCCB",        // hairline dividers on paper
   card: "#FFFFFF",
   cardBorder: "#EDE6D8",

@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { sendCompanionMessage } from "../services/api";
 
@@ -102,7 +103,7 @@ export default function CompanionScreen() {
           editable={!sending}
         />
         <Pressable style={styles.sendButton} onPress={send} disabled={sending}>
-          <Text style={styles.sendLabel}>Send</Text>
+          <Feather name="send" size={16} color={colors.paper} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   bubbleUser: {
-    backgroundColor: colors.teal,
+    backgroundColor: colors.amber,
     alignSelf: "flex-end",
   },
   bubbleText: { fontFamily: type.body, fontSize: 15, lineHeight: 21 },
@@ -155,10 +156,11 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     marginLeft: space.sm,
-    backgroundColor: colors.teal,
+    backgroundColor: colors.amber,
     borderRadius: radius.md,
     paddingHorizontal: space.md,
     paddingVertical: space.sm + 4,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  sendLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.paper },
 });
