@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+pipeline_output/
+sample_data/
+.DS_Store

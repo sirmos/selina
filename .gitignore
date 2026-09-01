@@ -1,0 +1,21 @@
+# app/ (Expo / React Native)
+app/node_modules/
+app/.expo/
+app/dist/
+app/.env
+
+# vision/ (Python)
+vision/__pycache__/
+vision/**/__pycache__/
+vision/*.pyc
+vision/pipeline_output/
+vision/sample_data/
+
+# backend/ (future)
+backend/node_modules/
+backend/__pycache__/
+backend/.env
+
+# general
+.DS_Store
+*.log
