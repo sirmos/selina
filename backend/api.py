@@ -13,16 +13,28 @@ Then:
         -d '{"type": "checkin_missed", "planned_time": "9:40pm"}'
 """
 
+import os
 from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from providers.mock_provider import MockProvider
+from providers.groq_provider import GroqProvider
 from orchestrator.life_orchestrator import LifeOrchestrator
 
 app = Flask(__name__)
 
-# MockProvider until Nebius access is unblocked, see README for how to
-# switch this to NebiusProvider later, it is a one-line change.
-provider = MockProvider()
+# Automatically uses real reasoning through Groq once GROQ_API_KEY is set,
+# falls back to MockProvider otherwise, so this works either way without
+# a manual code change.
+if os.environ.get("GROQ_API_KEY"):
+    provider = GroqProvider()
+    print("Using GroqProvider, real reasoning is active.")
+else:
+    provider = MockProvider()
+    print("No GROQ_API_KEY found, using MockProvider, replies will be canned text.")
+
 orchestrator = LifeOrchestrator(provider)
 
 

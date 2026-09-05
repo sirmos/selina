@@ -16,13 +16,13 @@ from .base import LLMProvider, CompletionRequest
 
 BASE_URL = "https://api.groq.com/openai/v1"
 
-# Groq's available free models change fairly often as they add and retire
-# them. Check console.groq.com/docs/models for the current list before
-# relying on this, these are reasonable defaults as of when this was
-# written, not a guarantee they're still active.
+# Groq retired llama-3.1-8b-instant and llama-3.3-70b-versatile on
+# August 16, 2026. Their own migration guide points to these as the
+# current production replacements. Check console.groq.com/docs/models if
+# this ever 404s again, their lineup changes more often than most.
 MODEL_BY_TIER = {
-    "fast": "llama-3.1-8b-instant",
-    "deep": "llama-3.3-70b-versatile",
+    "fast": "openai/gpt-oss-20b",
+    "deep": "openai/gpt-oss-120b",
 }
 
 
