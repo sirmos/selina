@@ -18,6 +18,7 @@ WELFARE_SYSTEM_PROMPT = (
 
 class WelfareAgent(Agent):
     name = "welfare"
+    domain_prompt = WELFARE_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         if event.get("type") != "welfare_checkin":

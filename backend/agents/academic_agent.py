@@ -17,6 +17,7 @@ ACADEMIC_SYSTEM_PROMPT = (
 
 class AcademicAgent(Agent):
     name = "academic"
+    domain_prompt = ACADEMIC_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         if event.get("type") != "deadline_added":

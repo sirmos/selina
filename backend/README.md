@@ -33,30 +33,55 @@ backend/
   api.py               Flask HTTP layer, run this to start the server
   providers/
     base.py             LLMProvider interface, every agent talks through this only
-    mock_provider.py    deterministic, no network, used for all current tests
+    mock_provider.py    deterministic, no network, used for structured-event tests
     nebius_provider.py  real Nemotron calls via Token Factory, kept but not a priority
+    openai_provider.py  real reasoning via OpenAI, needed for the Photon iMessage flow
   agents/
-    base.py             Agent base class
-    safety_agent.py      handles missed check ins and vision evidence results
-    health_agent.py      handles cycle tracking and symptom log entries
-    companion_agent.py   open ended conversation, powers the chat screen
-    rights_agent.py      handles the case timeline behind Rights and Support
-    welfare_agent.py     compares agreed hours and pay against what was reported
-    academic_agent.py    tracks deadlines and study reminders
-    career_agent.py       tracks job applications and follow up timing
-    financial_agent.py    compares spending against a simple budget pace
-    opportunity_agent.py  logs opportunities and flags urgent deadlines
+    base.py             Agent base class, handle() for structured events, handle_message() for free text
+    safety_agent.py      handles missed check ins, vision evidence, and safety conversation
+    health_agent.py      handles cycle tracking, symptom log entries, and health conversation
+    companion_agent.py   open ended conversation, powers the chat screen and the default fallback
+    rights_agent.py      handles the case timeline and rights conversation
+    welfare_agent.py     compares agreed hours and pay, and welfare conversation
+    academic_agent.py    tracks deadlines and academic conversation
+    career_agent.py       tracks job applications and career conversation
+    financial_agent.py    compares spending against budget pace and financial conversation
+    opportunity_agent.py  logs opportunities and opportunity conversation
   orchestrator/
-    life_orchestrator.py routes events to the right agent
+    life_orchestrator.py routes structured events (handle_event) and free text (handle_message)
+    router.py             classifies free text into one or more of the nine agents
   memory/
     timeline_store.py    in-memory record of what each agent has done
   tests/
-    test_orchestrator.py runs all nine agents end to end with MockProvider
+    test_orchestrator.py runs all nine agents end to end with MockProvider, structured events
+    test_router.py       proves the natural language router and multi-agent dispatch work
+  photon-bridge/         Node.js service connecting to Photon, not started, pending account access
 ```
 
-All nine agents from the original build plan are built. Deeper logic and
-real tool integrations (Tavily for Opportunity, more nuanced reasoning
-throughout) can still be added on top of any of them.
+All nine agents from the original build plan are built, each with both a
+structured event handler and a conversational one.
+
+## Two ways in
+
+**Structured events** (`POST /event`), used by the mobile app: a specific
+event type like `checkin_missed` or `cycle_logged`, routed by a fixed
+table in `EVENT_ROUTES`.
+
+**Natural language** (`POST /selina/message`), used by the iMessage
+channel: whatever a person actually types, no event type, no agent
+choice. The router in `orchestrator/router.py` reads the message and
+decides which of the nine agents apply, possibly more than one, and
+`LifeOrchestrator.handle_message()` dispatches to all of them and combines
+their replies into one natural response. This is what makes "my boss
+hasn't paid me for two months" turn into welfare, financial, and rights
+all contributing to a single reply, without the person ever picking an
+agent.
+
+This only works well with a real reasoning provider. `MockProvider`
+cannot produce real classifications, its canned replies don't parse into
+agent names, so it correctly falls back to Companion, see
+`test_router.py`'s first case. Real classification needs
+`OpenAIProvider` (or `NebiusProvider`, if that ever unblocks) active.
 
 ## Setup
 
@@ -68,9 +93,11 @@ pip install -r requirements.txt
 
 ```
 python tests/test_orchestrator.py
+python tests/test_router.py
 ```
 
-Expect output ending in `All assertions passed, all 9 agents verified.`
+Expect `All assertions passed, all 9 agents verified.` and
+`All router assertions passed.`
 
 ## Running the API
 
@@ -85,8 +112,26 @@ curl -X POST http://localhost:5000/event \
     -H "Content-Type: application/json" \
     -d '{"type": "checkin_missed", "planned_time": "9:40pm"}'
 
+curl -X POST http://localhost:5000/selina/message \
+    -H "Content-Type: application/json" \
+    -d '{"message": "My boss has not paid me for two months."}'
+
 curl http://localhost:5000/timeline
 ```
+
+## Switching to real reasoning
+
+Once you have an OpenAI key:
+
+1. Add `OPENAI_API_KEY` to your environment.
+2. In `orchestrator/life_orchestrator.py`'s construction (in `api.py`),
+   change the provider from `MockProvider()` to `OpenAIProvider()`.
+3. Rerun `tests/test_router.py`, the mechanism stays the same, only the
+   classification quality and reply text change from mock or scripted
+   text to real reasoning.
+
+No agent or router code changes, that is the point of the provider
+interface.
 
 ## Verified behavior
 

@@ -20,6 +20,7 @@ FOLLOW_UP_AFTER_DAYS = 7
 
 class CareerAgent(Agent):
     name = "career"
+    domain_prompt = CAREER_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         event_type = event.get("type")

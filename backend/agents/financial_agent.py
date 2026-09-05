@@ -16,6 +16,7 @@ FINANCIAL_SYSTEM_PROMPT = (
 
 class FinancialAgent(Agent):
     name = "financial"
+    domain_prompt = FINANCIAL_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         if event.get("type") != "budget_check":

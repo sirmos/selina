@@ -19,6 +19,7 @@ COMPANION_SYSTEM_PROMPT = (
 
 class CompanionAgent(Agent):
     name = "companion"
+    domain_prompt = COMPANION_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         if event.get("type") != "message":

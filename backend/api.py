@@ -26,6 +26,22 @@ provider = MockProvider()
 orchestrator = LifeOrchestrator(provider)
 
 
+@app.route("/selina/message", methods=["POST"])
+def selina_message():
+    """The single entry point for any channel where the person just types
+    what's going on, no agent selection. This is what Photon's iMessage
+    bridge calls."""
+    body = request.get_json(force=True, silent=True)
+    if not body or not body.get("message"):
+        return jsonify({"error": "Request body must include 'message'"}), 400
+
+    try:
+        result = orchestrator.handle_message(body["message"])
+        return jsonify(result), 200
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 @app.route("/event", methods=["POST"])
 def handle_event():
     event = request.get_json(force=True, silent=True)

@@ -19,6 +19,7 @@ HEALTH_SYSTEM_PROMPT = (
 
 class HealthAgent(Agent):
     name = "health"
+    domain_prompt = HEALTH_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         event_type = event.get("type")

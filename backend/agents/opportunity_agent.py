@@ -10,11 +10,18 @@ from datetime import datetime
 
 from agents.base import Agent
 
+OPPORTUNITY_SYSTEM_PROMPT = (
+    "You are the Opportunity side of Selina, a support system for women. "
+    "You help her understand scholarships, grants, and programs she's "
+    "found, plainly and encouragingly, without overpromising her chances."
+)
+
 OPPORTUNITY_URGENT_DAYS = 5
 
 
 class OpportunityAgent(Agent):
     name = "opportunity"
+    domain_prompt = OPPORTUNITY_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         if event.get("type") != "opportunity_logged":

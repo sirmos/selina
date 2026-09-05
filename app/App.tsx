@@ -5,9 +5,9 @@ import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
 import {
   useFonts,
-  Fraunces_600SemiBold,
-  Fraunces_500Medium_Italic,
-} from "@expo-google-fonts/fraunces";
+  Lora_600SemiBold,
+  Lora_500Medium_Italic,
+} from "@expo-google-fonts/lora";
 import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_600SemiBold } from "@expo-google-fonts/work-sans";
 
 import HomeScreen from "./src/screens/HomeScreen";
@@ -24,8 +24,8 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const [ready, setReady] = useState(false);
   const [fontsLoaded] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_500Medium_Italic,
+    Lora_600SemiBold,
+    Lora_500Medium_Italic,
     WorkSans_400Regular,
     WorkSans_500Medium,
     WorkSans_600SemiBold,

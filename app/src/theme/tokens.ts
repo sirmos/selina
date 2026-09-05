@@ -21,10 +21,12 @@ export const colors = {
 };
 
 export const type = {
-  // Display: a humanist serif for headings, gives Selina personality without
-  // reaching for the expected geometric sans.
-  display: "Fraunces_600SemiBold",
-  displayItalic: "Fraunces_500Medium_Italic",
+  // Display: a warm humanist serif for headings, gives Selina personality
+  // without reaching for the expected geometric sans, and without the
+  // eccentric swashes some display serifs (like Fraunces) put on letters
+  // such as J at small sizes.
+  display: "Lora_600SemiBold",
+  displayItalic: "Lora_500Medium_Italic",
   // Body: a clean grotesque for everything functional.
   body: "WorkSans_400Regular",
   bodyMedium: "WorkSans_500Medium",

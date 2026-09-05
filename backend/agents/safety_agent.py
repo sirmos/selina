@@ -19,6 +19,7 @@ SAFETY_SYSTEM_PROMPT = (
 
 class SafetyAgent(Agent):
     name = "safety"
+    domain_prompt = SAFETY_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         event_type = event.get("type")

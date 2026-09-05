@@ -22,6 +22,7 @@ URGENT_KEYWORDS = ["unpaid", "threatened", "locked", "confiscated", "unsafe", "r
 
 class RightsAgent(Agent):
     name = "rights"
+    domain_prompt = RIGHTS_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
         if event.get("type") != "case_entry_added":
