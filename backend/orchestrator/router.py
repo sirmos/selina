@@ -15,8 +15,8 @@ AGENT_TOPICS = {
     "safety": "feeling physically unsafe, dangerous situations, unsafe travel, harassment risk in the moment",
     "health": "physical or mental health, menstrual cycle, symptoms, medical worries",
     "companion": "wanting someone to talk to, emotional support, venting with no specific request",
-    "rights": "being mistreated, harassment, disputes, documenting an incident, uncomfortable messages from someone",
-    "welfare": "unpaid wages, working conditions, hours worked versus what was agreed",
+    "rights": "harassment, being threatened, or mistreatment that is not primarily about wages or hours, documenting an incident",
+    "welfare": "unpaid or underpaid wages, being shorted on pay, hours worked versus what was agreed, wage disputes with an employer",
     "academic": "school or coursework, requirements, deadlines, studying",
     "career": "job applications, interview preparation, career questions",
     "financial": "budgeting, spending, what she can afford",
@@ -28,8 +28,11 @@ ROUTER_SYSTEM_PROMPT = (
     "support system, decide which of the following areas are relevant to "
     "what she is describing. A message can involve more than one area. "
     "Only include an area if it is clearly relevant, do not guess. "
-    "Reply with nothing but a comma separated list of area names from this "
-    "exact set: " + ", ".join(AGENT_TOPICS.keys()) + ". "
+    "When money owed or hours worked is the main issue, include welfare, "
+    "even if the situation also feels unfair or upsetting, that overlap "
+    "with rights is expected and both can apply together. Reply with "
+    "nothing but a comma separated list of area names from this exact "
+    "set: " + ", ".join(AGENT_TOPICS.keys()) + ". "
     "If none clearly apply, reply with exactly: companion."
 )
 
