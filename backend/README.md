@@ -26,6 +26,37 @@ See Verified behavior below.
 still written correctly, in case Nebius access becomes possible later, but
 it is no longer something to actively pursue.
 
+## Real reasoning, with resilience
+
+Rather than depend on one free provider, `api.py` builds a fallback chain
+from whichever keys are actually set in `.env`, in this order: Groq,
+Gemini, OpenRouter, OpenAI. On every call, if the first provider fails
+for any reason, a retired model, a rate limit, a bad key, it falls
+through to the next automatically. `MockProvider` is always the final
+link, so a request never crashes even if every real provider is down at
+once, see `tests/test_fallback.py` for proof this actually switches.
+
+Set any combination of these in `backend/.env` to activate them:
+
+```
+GROQ_API_KEY=...
+GEMINI_API_KEY=...
+OPENROUTER_API_KEY=...
+OPENAI_API_KEY=...
+```
+
+None set at all, it runs on MockProvider only, useful for structural
+testing without spending or signing up for anything.
+
+A real bug this caught: the first live test against Groq came back as a
+wall of markdown tables and headers, completely wrong for a text message.
+Every agent's conversational reply now goes through a shared style guide
+(`IMESSAGE_STYLE_GUIDE` in `agents/base.py`) enforcing plain text, no
+markdown, two to four sentences. This applies automatically to every
+agent's `handle_message()`, and was also added to Companion's structured
+chat path (`handle()`), which builds its own request and would have
+missed the fix otherwise.
+
 ## Structure
 
 ```
@@ -33,9 +64,13 @@ backend/
   api.py               Flask HTTP layer, run this to start the server
   providers/
     base.py             LLMProvider interface, every agent talks through this only
-    mock_provider.py    deterministic, no network, used for structured-event tests
+    mock_provider.py    deterministic, no network, guaranteed last resort in the chain
+    fallback_provider.py wraps multiple providers, switches on failure, tested in test_fallback.py
+    groq_provider.py    free, no card, console.groq.com/keys
+    gemini_provider.py  free, no card, aistudio.google.com/apikey
+    openrouter_provider.py free tier available, openrouter.ai/keys
+    openai_provider.py  requires a card, kept for completeness
     nebius_provider.py  real Nemotron calls via Token Factory, kept but not a priority
-    openai_provider.py  real reasoning via OpenAI, needed for the Photon iMessage flow
   agents/
     base.py             Agent base class, handle() for structured events, handle_message() for free text
     safety_agent.py      handles missed check ins, vision evidence, and safety conversation

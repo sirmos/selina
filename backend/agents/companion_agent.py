@@ -5,7 +5,7 @@ message routes through the provider, unlike Safety and Health which mostly
 short circuit around it.
 """
 
-from agents.base import Agent
+from agents.base import Agent, IMESSAGE_STYLE_GUIDE
 from providers.base import CompletionRequest
 
 COMPANION_SYSTEM_PROMPT = (
@@ -30,7 +30,7 @@ class CompanionAgent(Agent):
             raise ValueError("Companion Agent received an empty message")
 
         request = CompletionRequest(
-            system_prompt=COMPANION_SYSTEM_PROMPT,
+            system_prompt=f"{COMPANION_SYSTEM_PROMPT}\n\n{IMESSAGE_STYLE_GUIDE}",
             user_prompt=text,
             tier="deep",  # open ended conversation gets the stronger model
         )

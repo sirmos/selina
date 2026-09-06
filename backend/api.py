@@ -19,22 +19,41 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from providers.mock_provider import MockProvider
-from providers.groq_provider import GroqProvider
+from providers.fallback_provider import FallbackProvider
 from orchestrator.life_orchestrator import LifeOrchestrator
 
 app = Flask(__name__)
 
-# Automatically uses real reasoning through Groq once GROQ_API_KEY is set,
-# falls back to MockProvider otherwise, so this works either way without
-# a manual code change.
-if os.environ.get("GROQ_API_KEY"):
-    provider = GroqProvider()
-    print("Using GroqProvider, real reasoning is active.")
-else:
-    provider = MockProvider()
-    print("No GROQ_API_KEY found, using MockProvider, replies will be canned text.")
+# Builds a chain from whichever free-tier keys are actually set, tried in
+# this order, falling through to the next the moment one fails for any
+# reason (retired model, rate limit, bad key). MockProvider is always
+# appended automatically inside FallbackProvider as the guaranteed last
+# resort, so this never crashes a request even if every real provider is
+# down at once.
+chain = []
 
+if os.environ.get("GROQ_API_KEY"):
+    from providers.groq_provider import GroqProvider
+    chain.append(("groq", GroqProvider()))
+
+if os.environ.get("GEMINI_API_KEY"):
+    from providers.gemini_provider import GeminiProvider
+    chain.append(("gemini", GeminiProvider()))
+
+if os.environ.get("OPENROUTER_API_KEY"):
+    from providers.openrouter_provider import OpenRouterProvider
+    chain.append(("openrouter", OpenRouterProvider()))
+
+if os.environ.get("OPENAI_API_KEY"):
+    from providers.openai_provider import OpenAIProvider
+    chain.append(("openai", OpenAIProvider()))
+
+if chain:
+    print(f"Real reasoning active, provider chain: {[name for name, _ in chain]} (falls back to mock if all fail)")
+else:
+    print("No provider keys found, using MockProvider only, replies will be canned text.")
+
+provider = FallbackProvider(chain)
 orchestrator = LifeOrchestrator(provider)
 
 
