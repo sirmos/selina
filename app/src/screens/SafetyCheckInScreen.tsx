@@ -7,13 +7,22 @@ import { reportMissedCheckIn } from "../services/api";
 
 type Status = "idle" | "counting" | "safe" | "missed";
 
-const CHECK_IN_SECONDS = 20; // short window for demo purposes, a real check in
-// would be set in minutes or hours by the person, this constant is only here
-// so the flow can be demoed quickly on stage or on camera.
+const DURATION_OPTIONS = [
+  { label: "15 min", seconds: 15 * 60 },
+  { label: "30 min", seconds: 30 * 60 },
+  { label: "1 hour", seconds: 60 * 60 },
+  { label: "2 hours", seconds: 120 * 60 },
+];
+
+function formatTime(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return \\:\\;
+}
 
 export default function SafetyCheckInScreen() {
   const [status, setStatus] = useState<Status>("idle");
-  const [secondsLeft, setSecondsLeft] = useState(CHECK_IN_SECONDS);
+  const [secondsLeft, setSecondsLeft] = useState(0);
   const [missedMessage, setMissedMessage] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -31,11 +40,11 @@ export default function SafetyCheckInScreen() {
     }
   }, [secondsLeft, status]);
 
-  function startCheckIn() {
+  function startCheckIn(durationSeconds: number) {
     setStatus("counting");
     setCheckInStatus("scheduled");
     setMissedMessage(null);
-    setSecondsLeft(CHECK_IN_SECONDS);
+    setSecondsLeft(durationSeconds);
     timerRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
@@ -69,6 +78,10 @@ export default function SafetyCheckInScreen() {
     setCheckInStatus("safe");
   }
 
+  function backToStart() {
+    setStatus("idle");
+  }
+
   function escalate() {
     Alert.alert(
       "Escalation prepared",
@@ -88,15 +101,26 @@ export default function SafetyCheckInScreen() {
       </Text>
 
       {status === "idle" && (
-        <Pressable style={styles.primaryButton} onPress={startCheckIn}>
-          <Text style={styles.primaryLabel}>Start check in</Text>
-        </Pressable>
+        <View>
+          <Text style={styles.pickerLabel}>Check in after</Text>
+          <View style={styles.durationRow}>
+            {DURATION_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt.label}
+                style={styles.durationButton}
+                onPress={() => startCheckIn(opt.seconds)}
+              >
+                <Text style={styles.durationLabel}>{opt.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
       )}
 
       {status === "counting" && (
         <View style={styles.countdownBox}>
-          <Text style={styles.countdownNumber}>{secondsLeft}</Text>
-          <Text style={styles.countdownLabel}>seconds until Selina checks on you</Text>
+          <Text style={styles.countdownNumber}>{formatTime(secondsLeft)}</Text>
+          <Text style={styles.countdownLabel}>until Selina checks on you</Text>
           <Pressable style={styles.primaryButton} onPress={markSafe}>
             <Text style={styles.primaryLabel}>I'm safe</Text>
           </Pressable>
@@ -107,7 +131,7 @@ export default function SafetyCheckInScreen() {
         <View style={styles.resultBox}>
           <Text style={styles.resultTitle}>Good to know</Text>
           <Text style={styles.resultDetail}>Logged as safe. No one else was notified.</Text>
-          <Pressable style={styles.secondaryButton} onPress={startCheckIn}>
+          <Pressable style={styles.secondaryButton} onPress={backToStart}>
             <Text style={styles.secondaryLabel}>Start another check in</Text>
           </Pressable>
         </View>
@@ -155,6 +179,26 @@ const styles = StyleSheet.create({
     marginBottom: space.xl,
     lineHeight: 20,
   },
+  pickerLabel: {
+    fontFamily: type.bodySemiBold,
+    fontSize: 13,
+    color: colors.inkSoft,
+    marginBottom: space.sm,
+  },
+  durationRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: space.sm,
+  },
+  durationButton: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.pill,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+  },
+  durationLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.teal },
   primaryButton: {
     backgroundColor: colors.teal,
     borderRadius: radius.md,
@@ -163,7 +207,7 @@ const styles = StyleSheet.create({
   },
   primaryLabel: { fontFamily: type.bodySemiBold, fontSize: 15, color: colors.paper },
   countdownBox: { alignItems: "center", marginTop: space.lg },
-  countdownNumber: { fontFamily: type.display, fontSize: 64, color: colors.teal },
+  countdownNumber: { fontFamily: type.display, fontSize: 56, color: colors.teal },
   countdownLabel: {
     fontFamily: type.body,
     fontSize: 13,

@@ -18,6 +18,7 @@ import RightsSupportScreen from "./src/screens/RightsSupportScreen";
 import { colors } from "./src/theme/tokens";
 import { configureRevenueCat } from "./src/services/revenuecat";
 import { SelinaProvider } from "./src/state/SelinaState";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +46,7 @@ export default function App() {
   }
 
   return (
+    <SafeAreaProvider>
     <SelinaProvider>
       <NavigationContainer>
         <StatusBar style="dark" />
@@ -73,5 +75,9 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </SelinaProvider>
+  </SafeAreaProvider>
   );
 }
+
+
+

@@ -1,5 +1,23 @@
 {
-  "plugins": [
-    "expo-asset"
-  ]
+  "expo": {
+    "name": "Selina",
+    "slug": "selina-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-asset"
+    ],
+    "android": {
+      "package": "com.sirmos.selinaapp"
+    },
+    "ios": {
+      "bundleIdentifier": "com.sirmos.selinaapp"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f961e8bf-2f12-4de9-aed2-7d52e2e9c2c7"
+      }
+    }
+  }
 }

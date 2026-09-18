@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sendCompanionMessage } from "../services/api";
 
 type Message = {
@@ -27,6 +28,7 @@ const opening: Message = {
 };
 
 export default function CompanionScreen() {
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([opening]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -92,7 +94,7 @@ export default function CompanionScreen() {
           sending ? <ActivityIndicator color={colors.teal} style={{ marginTop: space.sm }} /> : null
         }
       />
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, { paddingBottom: insets.bottom + 60 }]}>
         <TextInput
           style={styles.input}
           value={draft}
@@ -164,3 +166,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
+
+
+
+
+
+
+

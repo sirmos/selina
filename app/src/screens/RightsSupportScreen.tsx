@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { View, Text, FlatList, Pressable, TextInput, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelinaState } from "../state/SelinaState";
 import { submitCaseEntry } from "../services/api";
 
 export default function RightsSupportScreen() {
+  const insets = useSafeAreaInsets();
   const { caseEntries, addCaseEntry } = useSelinaState();
   const [draft, setDraft] = useState("");
   const [adding, setAdding] = useState(false);
@@ -34,7 +36,7 @@ export default function RightsSupportScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, space.sm) + space.lg }]}>
       <View style={styles.iconCircle}>
         <Feather name="file-text" size={22} color={colors.rose} />
       </View>
@@ -163,3 +165,6 @@ const styles = StyleSheet.create({
   },
   saveLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.paper },
 });
+
+
+
