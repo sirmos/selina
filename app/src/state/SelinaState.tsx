@@ -9,17 +9,25 @@ export type CaseEntry = {
   date: string;
 };
 
+export type EmergencyContact = {
+  name: string;
+  reachMethod: string;
+};
+
 type SelinaState = {
   checkInStatus: CheckInStatus;
   setCheckInStatus: (status: CheckInStatus) => void;
   caseEntries: CaseEntry[];
   addCaseEntry: (entry: Omit<CaseEntry, "id" | "date">) => void;
+  emergencyContact: EmergencyContact | null;
+  setEmergencyContact: (contact: EmergencyContact) => void;
 };
 
 const SelinaContext = createContext<SelinaState | undefined>(undefined);
 
 export function SelinaProvider({ children }: { children: ReactNode }) {
   const [checkInStatus, setCheckInStatus] = useState<CheckInStatus>("none");
+  const [emergencyContact, setEmergencyContact] = useState<EmergencyContact | null>(null);
   const [caseEntries, setCaseEntries] = useState<CaseEntry[]>([
     {
       id: "c0",
@@ -38,7 +46,14 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
 
   return (
     <SelinaContext.Provider
-      value={{ checkInStatus, setCheckInStatus, caseEntries, addCaseEntry }}
+      value={{
+        checkInStatus,
+        setCheckInStatus,
+        caseEntries,
+        addCaseEntry,
+        emergencyContact,
+        setEmergencyContact,
+      }}
     >
       {children}
     </SelinaContext.Provider>

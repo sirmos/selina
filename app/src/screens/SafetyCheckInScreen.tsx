@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSelinaState } from "../state/SelinaState";
@@ -20,13 +20,15 @@ function formatTime(totalSeconds: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function SafetyCheckInScreen() {
+export default function SafetyCheckInScreen({ navigation }: { navigation: any }) {
   const [status, setStatus] = useState<Status>("idle");
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [missedMessage, setMissedMessage] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { setCheckInStatus } = useSelinaState();
+  const { setCheckInStatus, emergencyContact } = useSelinaState();
 
   useEffect(() => {
     return () => {
@@ -56,6 +58,14 @@ export default function SafetyCheckInScreen() {
     }, 1000);
   }
 
+  function startCustom() {
+    const minutes = parseInt(customMinutes, 10);
+    if (!minutes || minutes <= 0) return;
+    setShowCustom(false);
+    setCustomMinutes("");
+    startCheckIn(minutes * 60);
+  }
+
   async function handleMissed() {
     setStatus("missed");
     setCheckInStatus("missed");
@@ -83,10 +93,21 @@ export default function SafetyCheckInScreen() {
   }
 
   function escalate() {
-    Alert.alert(
-      "Escalation prepared",
-      "In the full build, this notifies your chosen contact and opens the incident timeline. Nothing is sent without your say so."
-    );
+    if (emergencyContact) {
+      Alert.alert(
+        `Reaching out to ${emergencyContact.name}`,
+        `In the full build, Selina contacts them via: ${emergencyContact.reachMethod}. Nothing is sent without your say so.`
+      );
+    } else {
+      Alert.alert(
+        "No emergency contact set",
+        "Set one up first so Selina knows who to reach.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "Set up now", onPress: () => navigation.navigate("EmergencyContact") },
+        ]
+      );
+    }
   }
 
   return (
@@ -99,6 +120,18 @@ export default function SafetyCheckInScreen() {
         Selina checks in once, at the time you choose. If you don't respond, your contact is
         offered the chance to step in, nothing happens automatically behind your back.
       </Text>
+
+      <Pressable
+        style={styles.contactRow}
+        onPress={() => navigation.navigate("EmergencyContact")}
+      >
+        <Feather name="user" size={14} color={colors.inkSoft} />
+        <Text style={styles.contactRowText}>
+          {emergencyContact
+            ? `Contact: ${emergencyContact.name}`
+            : "No emergency contact set, tap to add one"}
+        </Text>
+      </Pressable>
 
       {status === "idle" && (
         <View>
@@ -113,7 +146,29 @@ export default function SafetyCheckInScreen() {
                 <Text style={styles.durationLabel}>{opt.label}</Text>
               </Pressable>
             ))}
+            <Pressable
+              style={styles.durationButton}
+              onPress={() => setShowCustom(true)}
+            >
+              <Text style={styles.durationLabel}>Custom</Text>
+            </Pressable>
           </View>
+
+          {showCustom && (
+            <View style={styles.customRow}>
+              <TextInput
+                style={styles.customInput}
+                value={customMinutes}
+                onChangeText={setCustomMinutes}
+                placeholder="Minutes"
+                placeholderTextColor={colors.inkSoft}
+                keyboardType="number-pad"
+              />
+              <Pressable style={styles.customStartButton} onPress={startCustom}>
+                <Text style={styles.customStartLabel}>Start</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
 
@@ -176,8 +231,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.inkSoft,
     marginTop: space.xs,
-    marginBottom: space.xl,
+    marginBottom: space.md,
     lineHeight: 20,
+  },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    marginBottom: space.xl,
+  },
+  contactRowText: {
+    fontFamily: type.body,
+    fontSize: 12.5,
+    color: colors.inkSoft,
+    textDecorationLine: "underline",
   },
   pickerLabel: {
     fontFamily: type.bodySemiBold,
@@ -199,6 +266,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
   },
   durationLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.teal },
+  customRow: {
+    flexDirection: "row",
+    marginTop: space.md,
+    gap: space.sm,
+  },
+  customInput: {
+    flex: 1,
+    fontFamily: type.body,
+    fontSize: 15,
+    color: colors.ink,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  customStartButton: {
+    backgroundColor: colors.teal,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+    justifyContent: "center",
+  },
+  customStartLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.paper },
   primaryButton: {
     backgroundColor: colors.teal,
     borderRadius: radius.md,

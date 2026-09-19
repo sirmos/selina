@@ -15,6 +15,7 @@ import CompanionScreen from "./src/screens/CompanionScreen";
 import PaywallScreen from "./src/screens/PaywallScreen";
 import SafetyCheckInScreen from "./src/screens/SafetyCheckInScreen";
 import RightsSupportScreen from "./src/screens/RightsSupportScreen";
+import EmergencyContactScreen from "./src/screens/EmergencyContactScreen";
 import { colors } from "./src/theme/tokens";
 import { configureRevenueCat } from "./src/services/revenuecat";
 import { SelinaProvider } from "./src/state/SelinaState";
@@ -47,37 +48,39 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-    <SelinaProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen
-            name="Companion"
-            component={CompanionScreen}
-            options={{ headerShown: true, title: "Companion" }}
-          />
-          <Stack.Screen
-            name="SafetyCheckIn"
-            component={SafetyCheckInScreen}
-            options={{ headerShown: true, title: "Safety check in" }}
-          />
-          <Stack.Screen
-            name="RightsSupport"
-            component={RightsSupportScreen}
-            options={{ headerShown: true, title: "Your case" }}
-          />
-          <Stack.Screen
-            name="Paywall"
-            component={PaywallScreen}
-            options={{ headerShown: true, title: "Selina Plus", presentation: "modal" }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SelinaProvider>
-  </SafeAreaProvider>
+      <SelinaProvider>
+        <NavigationContainer>
+          <StatusBar style="dark" />
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="Companion"
+              component={CompanionScreen}
+              options={{ headerShown: true, title: "Companion" }}
+            />
+            <Stack.Screen
+              name="SafetyCheckIn"
+              component={SafetyCheckInScreen}
+              options={{ headerShown: true, title: "Safety check in" }}
+            />
+            <Stack.Screen
+              name="RightsSupport"
+              component={RightsSupportScreen}
+              options={{ headerShown: true, title: "Your case" }}
+            />
+            <Stack.Screen
+              name="EmergencyContact"
+              component={EmergencyContactScreen}
+              options={{ headerShown: true, title: "Emergency contact" }}
+            />
+            <Stack.Screen
+              name="Paywall"
+              component={PaywallScreen}
+              options={{ headerShown: true, title: "Selina Plus", presentation: "modal" }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SelinaProvider>
+    </SafeAreaProvider>
   );
 }
-
-
-
