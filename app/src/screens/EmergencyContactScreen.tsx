@@ -1,18 +1,19 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSelinaState } from "../state/SelinaState";
 
-export default function EmergencyContactScreen({ navigation }: { navigation: any }) {
-  const { emergencyContact, setEmergencyContact } = useSelinaState();
-  const [name, setName] = useState(emergencyContact?.name ?? "");
-  const [reachMethod, setReachMethod] = useState(emergencyContact?.reachMethod ?? "");
+export default function EmergencyContactScreen() {
+  const { emergencyContacts, addEmergencyContact, removeEmergencyContact } = useSelinaState();
+  const [name, setName] = useState("");
+  const [reachMethod, setReachMethod] = useState("");
 
   function save() {
     if (!name.trim() || !reachMethod.trim()) return;
-    setEmergencyContact({ name: name.trim(), reachMethod: reachMethod.trim() });
-    navigation.goBack();
+    addEmergencyContact({ name: name.trim(), reachMethod: reachMethod.trim() });
+    setName("");
+    setReachMethod("");
   }
 
   return (
@@ -20,13 +21,30 @@ export default function EmergencyContactScreen({ navigation }: { navigation: any
       <View style={styles.iconCircle}>
         <Feather name="user-plus" size={22} color={colors.rose} />
       </View>
-      <Text style={styles.title}>Emergency contact</Text>
+      <Text style={styles.title}>Emergency contacts</Text>
       <Text style={styles.subtitle}>
-        Whoever you trust most, and however you'd actually want Selina to reach them, a phone
-        number, a WhatsApp, whatever's real for you.
+        Add as many people as you'd actually want reached, and however you'd want Selina to
+        reach them, a phone number, a WhatsApp, whatever's real for you.
       </Text>
 
-      <Text style={styles.label}>Their name</Text>
+      <FlatList
+        data={emergencyContacts}
+        keyExtractor={(c) => c.id}
+        style={styles.list}
+        renderItem={({ item }) => (
+          <View style={styles.contactCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contactName}>{item.name}</Text>
+              <Text style={styles.contactMethod}>{item.reachMethod}</Text>
+            </View>
+            <Pressable onPress={() => removeEmergencyContact(item.id)}>
+              <Feather name="x" size={18} color={colors.inkSoft} />
+            </Pressable>
+          </View>
+        )}
+      />
+
+      <Text style={styles.label}>Name</Text>
       <TextInput
         style={styles.input}
         value={name}
@@ -45,7 +63,7 @@ export default function EmergencyContactScreen({ navigation }: { navigation: any
       />
 
       <Pressable style={styles.saveButton} onPress={save}>
-        <Text style={styles.saveLabel}>Save contact</Text>
+        <Text style={styles.saveLabel}>Add contact</Text>
       </Pressable>
     </View>
   );
@@ -68,15 +86,28 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: colors.inkSoft,
     marginTop: space.xs,
-    marginBottom: space.xl,
+    marginBottom: space.md,
     lineHeight: 19,
   },
+  list: { maxHeight: 180, marginBottom: space.md },
+  contactCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    padding: space.md,
+    marginBottom: space.sm,
+  },
+  contactName: { fontFamily: type.bodySemiBold, fontSize: 15, color: colors.ink },
+  contactMethod: { fontFamily: type.body, fontSize: 13, color: colors.inkSoft, marginTop: 2 },
   label: {
     fontFamily: type.bodySemiBold,
     fontSize: 13,
     color: colors.inkSoft,
     marginBottom: space.xs,
-    marginTop: space.md,
+    marginTop: space.sm,
   },
   input: {
     fontFamily: type.body,
@@ -94,7 +125,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: space.md,
     alignItems: "center",
-    marginTop: space.xl,
+    marginTop: space.lg,
   },
   saveLabel: { fontFamily: type.bodySemiBold, fontSize: 15, color: colors.paper },
 });

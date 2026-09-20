@@ -10,6 +10,7 @@ export type CaseEntry = {
 };
 
 export type EmergencyContact = {
+  id: string;
   name: string;
   reachMethod: string;
 };
@@ -19,15 +20,19 @@ type SelinaState = {
   setCheckInStatus: (status: CheckInStatus) => void;
   caseEntries: CaseEntry[];
   addCaseEntry: (entry: Omit<CaseEntry, "id" | "date">) => void;
-  emergencyContact: EmergencyContact | null;
-  setEmergencyContact: (contact: EmergencyContact) => void;
+  emergencyContacts: EmergencyContact[];
+  addEmergencyContact: (contact: Omit<EmergencyContact, "id">) => void;
+  removeEmergencyContact: (id: string) => void;
+  activeCheckInId: string | null;
+  setActiveCheckInId: (id: string | null) => void;
 };
 
 const SelinaContext = createContext<SelinaState | undefined>(undefined);
 
 export function SelinaProvider({ children }: { children: ReactNode }) {
   const [checkInStatus, setCheckInStatus] = useState<CheckInStatus>("none");
-  const [emergencyContact, setEmergencyContact] = useState<EmergencyContact | null>(null);
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [activeCheckInId, setActiveCheckInId] = useState<string | null>(null);
   const [caseEntries, setCaseEntries] = useState<CaseEntry[]>([
     {
       id: "c0",
@@ -44,6 +49,14 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
     ]);
   }
 
+  function addEmergencyContact(contact: Omit<EmergencyContact, "id">) {
+    setEmergencyContacts((prev) => [...prev, { ...contact, id: `contact${prev.length}-${Date.now()}` }]);
+  }
+
+  function removeEmergencyContact(id: string) {
+    setEmergencyContacts((prev) => prev.filter((c) => c.id !== id));
+  }
+
   return (
     <SelinaContext.Provider
       value={{
@@ -51,8 +64,11 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
         setCheckInStatus,
         caseEntries,
         addCaseEntry,
-        emergencyContact,
-        setEmergencyContact,
+        emergencyContacts,
+        addEmergencyContact,
+        removeEmergencyContact,
+        activeCheckInId,
+        setActiveCheckInId,
       }}
     >
       {children}

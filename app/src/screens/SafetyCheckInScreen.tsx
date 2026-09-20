@@ -1,9 +1,15 @@
-import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput } from "react-native";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSelinaState } from "../state/SelinaState";
-import { reportMissedCheckIn } from "../services/api";
+import {
+  startSafetyCheckIn,
+  getSafetyCheckIn,
+  markSafetyCheckInSafe,
+  triggerSafetyCheckInNow,
+} from "../services/api";
 
 type Status = "idle" | "counting" | "safe" | "missed";
 
@@ -24,11 +30,20 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
   const [status, setStatus] = useState<Status>("idle");
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [missedMessage, setMissedMessage] = useState<string | null>(null);
-  const [loadingMessage, setLoadingMessage] = useState(false);
+  const [contactsNotified, setContactsNotified] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
+  const [destination, setDestination] = useState("");
+  const [meetingWho, setMeetingWho] = useState("");
+  const [riskNote, setRiskNote] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { setCheckInStatus, emergencyContact } = useSelinaState();
+  const {
+    setCheckInStatus,
+    emergencyContacts,
+    activeCheckInId,
+    setActiveCheckInId,
+  } = useSelinaState();
 
   useEffect(() => {
     return () => {
@@ -36,26 +51,77 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
     };
   }, []);
 
-  useEffect(() => {
-    if (status === "counting" && secondsLeft === 0) {
-      handleMissed();
-    }
-  }, [secondsLeft, status]);
+  // Every time this screen comes back into focus (reopened, returned to
+  // after navigating away, or the app itself reopened while this was the
+  // active screen) resync against the server's real clock rather than
+  // trusting whatever the phone's own timer thinks happened while it
+  // wasn't looking.
+  useFocusEffect(
+    useCallback(() => {
+      if (activeCheckInId) {
+        syncFromServer(activeCheckInId);
+      }
+    }, [activeCheckInId])
+  );
 
-  function startCheckIn(durationSeconds: number) {
-    setStatus("counting");
-    setCheckInStatus("scheduled");
-    setMissedMessage(null);
-    setSecondsLeft(durationSeconds);
-    timerRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  async function syncFromServer(id: string) {
+    try {
+      const record = await getSafetyCheckIn(id);
+      applyServerRecord(record);
+    } catch (err) {
+      // Server unreachable, keep whatever local state exists rather than
+      // wiping the screen, and let the user retry manually.
+    }
+  }
+
+  function applyServerRecord(record: any) {
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    if (record.status === "scheduled") {
+      setStatus("counting");
+      setCheckInStatus("scheduled");
+      setSecondsLeft(record.seconds_left);
+      timerRef.current = setInterval(() => {
+        setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (record.status === "missed") {
+      setStatus("missed");
+      setCheckInStatus("missed");
+      setMissedMessage(record.escalation_message);
+      setContactsNotified(record.contacts_notified || []);
+    } else if (record.status === "safe") {
+      setStatus("safe");
+      setCheckInStatus("safe");
+    }
+  }
+
+  async function startCheckIn(durationSeconds: number) {
+    if (emergencyContacts.length === 0) {
+      Alert.alert(
+        "Add a contact first",
+        "Selina needs at least one emergency contact before starting a check in.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "Add one now", onPress: () => navigation.navigate("EmergencyContact") },
+        ]
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const record = await startSafetyCheckIn(
+        durationSeconds,
+        { destination: destination.trim(), meeting_who: meetingWho.trim(), risk_note: riskNote.trim() },
+        emergencyContacts.map((c) => ({ name: c.name, reach_method: c.reachMethod }))
+      );
+      setActiveCheckInId(record.id);
+      applyServerRecord(record);
+    } catch (err) {
+      Alert.alert("Couldn't start check in", "Check that the backend is running and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function startCustom() {
@@ -66,59 +132,70 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
     startCheckIn(minutes * 60);
   }
 
-  async function handleMissed() {
-    setStatus("missed");
-    setCheckInStatus("missed");
-    setLoadingMessage(true);
-    try {
-      const message = await reportMissedCheckIn("this evening's check in");
-      setMissedMessage(message);
-    } catch (err) {
-      setMissedMessage(
-        "Couldn't reach the server just now, so this is a fallback message. Check that the backend is running."
-      );
-    } finally {
-      setLoadingMessage(false);
-    }
-  }
-
-  function markSafe() {
+  async function markSafe() {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (activeCheckInId) {
+      try {
+        await markSafetyCheckInSafe(activeCheckInId);
+      } catch (err) {
+        // Even if the server call fails, still reflect safe locally, the
+        // person said they're safe, don't leave them stuck on a spinner.
+      }
+    }
     setStatus("safe");
     setCheckInStatus("safe");
+    setActiveCheckInId(null);
   }
 
   function backToStart() {
     setStatus("idle");
+    setDestination("");
+    setMeetingWho("");
+    setRiskNote("");
   }
 
-  function escalate() {
-    if (emergencyContact) {
-      Alert.alert(
-        `Reaching out to ${emergencyContact.name}`,
-        `In the full build, Selina contacts them via: ${emergencyContact.reachMethod}. Nothing is sent without your say so.`
-      );
-    } else {
-      Alert.alert(
-        "No emergency contact set",
-        "Set one up first so Selina knows who to reach.",
-        [
-          { text: "Not now", style: "cancel" },
-          { text: "Set up now", onPress: () => navigation.navigate("EmergencyContact") },
-        ]
-      );
+  async function escalateNow() {
+    if (!activeCheckInId) {
+      Alert.alert("No check in active", "Start a check in first.");
+      return;
     }
+    Alert.alert(
+      "Alert your emergency contact now?",
+      "This immediately notifies your contact, don't wait for the timer.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes, alert them",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const record = await triggerSafetyCheckInNow(activeCheckInId);
+              applyServerRecord(record);
+            } catch (err) {
+              Alert.alert("Couldn't reach the server", "Check that the backend is running.");
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  function escalateFromMissed() {
+    Alert.alert(
+      contactsNotified.length ? `Contacts notified: ${contactsNotified.join(", ")}` : "Contact notified",
+      "In the full build, this is delivered as a real message. Right now it's generated and recorded, actual delivery needs a messaging service wired in on top."
+    );
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.iconCircle}>
         <Feather name="shield" size={22} color={colors.teal} />
       </View>
       <Text style={styles.title}>Evening walk</Text>
       <Text style={styles.subtitle}>
-        Selina checks in once, at the time you choose. If you don't respond, your contact is
-        offered the chance to step in, nothing happens automatically behind your back.
+        Selina checks in once, at the time you choose. If you don't respond, your contacts are
+        notified automatically, you don't have to be holding the phone for that to happen.
       </Text>
 
       <Pressable
@@ -127,14 +204,41 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
       >
         <Feather name="user" size={14} color={colors.inkSoft} />
         <Text style={styles.contactRowText}>
-          {emergencyContact
-            ? `Contact: ${emergencyContact.name}`
-            : "No emergency contact set, tap to add one"}
+          {emergencyContacts.length > 0
+            ? `${emergencyContacts.length} contact${emergencyContacts.length > 1 ? "s" : ""} set`
+            : "No emergency contacts set, tap to add one"}
         </Text>
       </Pressable>
 
       {status === "idle" && (
         <View>
+          <Text style={styles.label}>Where are you headed? (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={destination}
+            onChangeText={setDestination}
+            placeholder="e.g. Ade's place"
+            placeholderTextColor={colors.inkSoft}
+          />
+
+          <Text style={styles.label}>Who are you meeting? (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={meetingWho}
+            onChangeText={setMeetingWho}
+            placeholder="e.g. a new client"
+            placeholderTextColor={colors.inkSoft}
+          />
+
+          <Text style={styles.label}>Anything that feels off right now? (optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={riskNote}
+            onChangeText={setRiskNote}
+            placeholder="e.g. taxi driver seemed off"
+            placeholderTextColor={colors.inkSoft}
+          />
+
           <Text style={styles.pickerLabel}>Check in after</Text>
           <View style={styles.durationRow}>
             {DURATION_OPTIONS.map((opt) => (
@@ -142,6 +246,7 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
                 key={opt.label}
                 style={styles.durationButton}
                 onPress={() => startCheckIn(opt.seconds)}
+                disabled={loading}
               >
                 <Text style={styles.durationLabel}>{opt.label}</Text>
               </Pressable>
@@ -149,6 +254,7 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
             <Pressable
               style={styles.durationButton}
               onPress={() => setShowCustom(true)}
+              disabled={loading}
             >
               <Text style={styles.durationLabel}>Custom</Text>
             </Pressable>
@@ -169,6 +275,8 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
               </Pressable>
             </View>
           )}
+
+          {loading && <ActivityIndicator color={colors.teal} style={{ marginTop: space.md }} />}
         </View>
       )}
 
@@ -176,8 +284,14 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
         <View style={styles.countdownBox}>
           <Text style={styles.countdownNumber}>{formatTime(secondsLeft)}</Text>
           <Text style={styles.countdownLabel}>until Selina checks on you</Text>
+          <Text style={styles.backgroundNote}>
+            This keeps running even if you close the app or your phone is put away.
+          </Text>
           <Pressable style={styles.primaryButton} onPress={markSafe}>
             <Text style={styles.primaryLabel}>I'm safe</Text>
+          </Pressable>
+          <Pressable style={styles.dangerButton} onPress={escalateNow}>
+            <Text style={styles.dangerLabel}>I feel unsafe right now</Text>
           </Pressable>
         </View>
       )}
@@ -194,28 +308,23 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
 
       {status === "missed" && (
         <View style={[styles.resultBox, styles.resultBoxAlert]}>
-          <Text style={styles.resultTitle}>Check in missed</Text>
-
-          {loadingMessage ? (
-            <ActivityIndicator color={colors.rose} style={{ marginVertical: space.sm }} />
-          ) : (
-            <Text style={styles.resultDetail}>{missedMessage}</Text>
-          )}
-
+          <Text style={styles.resultTitle}>Check in missed, contacts already notified</Text>
+          <Text style={styles.resultDetail}>{missedMessage}</Text>
           <Pressable style={styles.primaryButton} onPress={markSafe}>
             <Text style={styles.primaryLabel}>I'm safe, false alarm</Text>
           </Pressable>
-          <Pressable style={styles.escalateButton} onPress={escalate}>
-            <Text style={styles.escalateLabel}>Reach out to my contact</Text>
+          <Pressable style={styles.escalateButton} onPress={escalateFromMissed}>
+            <Text style={styles.escalateLabel}>Who was notified?</Text>
           </Pressable>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.paper, padding: space.lg, paddingTop: space.xxl },
+  container: { flex: 1, backgroundColor: colors.paper },
+  content: { padding: space.lg, paddingTop: space.xxl, paddingBottom: space.xxl },
   iconCircle: {
     width: 48,
     height: 48,
@@ -238,7 +347,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: space.xs,
-    marginBottom: space.xl,
+    marginBottom: space.lg,
   },
   contactRowText: {
     fontFamily: type.body,
@@ -246,11 +355,30 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     textDecorationLine: "underline",
   },
+  label: {
+    fontFamily: type.bodySemiBold,
+    fontSize: 13,
+    color: colors.inkSoft,
+    marginBottom: space.xs,
+    marginTop: space.sm,
+  },
+  input: {
+    fontFamily: type.body,
+    fontSize: 15,
+    color: colors.ink,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
   pickerLabel: {
     fontFamily: type.bodySemiBold,
     fontSize: 13,
     color: colors.inkSoft,
     marginBottom: space.sm,
+    marginTop: space.lg,
   },
   durationRow: {
     flexDirection: "row",
@@ -297,13 +425,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryLabel: { fontFamily: type.bodySemiBold, fontSize: 15, color: colors.paper },
+  dangerButton: {
+    marginTop: space.sm,
+    borderRadius: radius.md,
+    paddingVertical: space.md,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.rose,
+  },
+  dangerLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.rose },
   countdownBox: { alignItems: "center", marginTop: space.lg },
   countdownNumber: { fontFamily: type.display, fontSize: 56, color: colors.teal },
   countdownLabel: {
     fontFamily: type.body,
     fontSize: 13,
     color: colors.inkSoft,
+    marginBottom: space.xs,
+  },
+  backgroundNote: {
+    fontFamily: type.body,
+    fontSize: 11.5,
+    color: colors.inkSoft,
     marginBottom: space.xl,
+    textAlign: "center",
+    paddingHorizontal: space.lg,
   },
   resultBox: {
     backgroundColor: colors.card,
@@ -314,7 +459,7 @@ const styles = StyleSheet.create({
     marginTop: space.md,
   },
   resultBoxAlert: { borderColor: colors.rose },
-  resultTitle: { fontFamily: type.display, fontSize: 19, color: colors.ink, marginBottom: 4 },
+  resultTitle: { fontFamily: type.display, fontSize: 18, color: colors.ink, marginBottom: 4 },
   resultDetail: {
     fontFamily: type.body,
     fontSize: 14,

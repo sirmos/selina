@@ -21,15 +21,10 @@ load_dotenv()
 
 from providers.fallback_provider import FallbackProvider
 from orchestrator.life_orchestrator import LifeOrchestrator
+from safety_checkins import start_checkin, mark_safe, get_checkin, trigger_now
 
 app = Flask(__name__)
 
-# Builds a chain from whichever free-tier keys are actually set, tried in
-# this order, falling through to the next the moment one fails for any
-# reason (retired model, rate limit, bad key). MockProvider is always
-# appended automatically inside FallbackProvider as the guaranteed last
-# resort, so this never crashes a request even if every real provider is
-# down at once.
 chain = []
 
 if os.environ.get("GROQ_API_KEY"):
@@ -59,9 +54,6 @@ orchestrator = LifeOrchestrator(provider)
 
 @app.route("/selina/message", methods=["POST"])
 def selina_message():
-    """The single entry point for any channel where the person just types
-    what's going on, no agent selection. This is what Photon's iMessage
-    bridge calls."""
     body = request.get_json(force=True, silent=True)
     if not body or not body.get("message"):
         return jsonify({"error": "Request body must include 'message'"}), 400
@@ -84,6 +76,55 @@ def handle_event():
         return jsonify(result), 200
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/safety/checkin", methods=["POST"])
+def safety_checkin_start():
+    """Starts a check in that the server itself tracks, so it keeps
+    running whether the app is open, backgrounded, or the phone is put
+    away, and auto escalates on its own if the deadline passes."""
+    body = request.get_json(force=True, silent=True) or {}
+    duration_seconds = body.get("duration_seconds")
+    if not duration_seconds or duration_seconds <= 0:
+        return jsonify({"error": "duration_seconds is required and must be positive"}), 400
+
+    contacts = body.get("contacts", [])
+    if not contacts:
+        return jsonify({"error": "at least one contact is required"}), 400
+
+    trip_details = body.get("trip_details", {})
+    record = start_checkin(duration_seconds, trip_details, contacts, orchestrator)
+    public = {k: v for k, v in record.items() if k != "_timer"}
+    return jsonify(public), 201
+
+
+@app.route("/safety/checkin/<checkin_id>/safe", methods=["POST"])
+def safety_checkin_safe(checkin_id):
+    record = mark_safe(checkin_id)
+    if not record:
+        return jsonify({"error": "check in not found"}), 404
+    return jsonify(record), 200
+
+
+@app.route("/safety/checkin/<checkin_id>/trigger", methods=["POST"])
+def safety_checkin_trigger(checkin_id):
+    """Manual, immediate escalation, 'I feel unsafe right now,' or used
+    on someone else's behalf if a phone has been taken."""
+    record = trigger_now(checkin_id, orchestrator)
+    if not record:
+        return jsonify({"error": "check in not found"}), 404
+    return jsonify(record), 200
+
+
+@app.route("/safety/checkin/<checkin_id>", methods=["GET"])
+def safety_checkin_status(checkin_id):
+    """The app calls this whenever the Safety screen is opened or
+    reopened, to resync its displayed timer against the server's real
+    clock rather than trusting whatever the phone's own timer thinks."""
+    record = get_checkin(checkin_id)
+    if not record:
+        return jsonify({"error": "check in not found"}), 404
+    return jsonify(record), 200
 
 
 @app.route("/timeline", methods=["GET"])
