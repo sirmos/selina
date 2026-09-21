@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput, ScrollView } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput, ScrollView, AppState, Platform, KeyboardAvoidingView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { colors, type, space, radius } from "../theme/tokens";
@@ -38,6 +38,7 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
   const [meetingWho, setMeetingWho] = useState("");
   const [riskNote, setRiskNote] = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const appStateRef = useRef(AppState.currentState);
   const {
     setCheckInStatus,
     emergencyContacts,
@@ -51,11 +52,6 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
     };
   }, []);
 
-  // Every time this screen comes back into focus (reopened, returned to
-  // after navigating away, or the app itself reopened while this was the
-  // active screen) resync against the server's real clock rather than
-  // trusting whatever the phone's own timer thinks happened while it
-  // wasn't looking.
   useFocusEffect(
     useCallback(() => {
       if (activeCheckInId) {
@@ -63,6 +59,21 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
       }
     }, [activeCheckInId])
   );
+
+  // React Navigation's focus only fires when moving between screens
+  // inside the app. Minimizing the whole app is a different event, the
+  // OS backgrounding it, this is what actually catches that and resyncs
+  // against the server's real clock the moment the app comes back.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      const wasBackground = appStateRef.current.match(/inactive|background/);
+      if (wasBackground && nextAppState === "active" && activeCheckInId) {
+        syncFromServer(activeCheckInId);
+      }
+      appStateRef.current = nextAppState;
+    });
+    return () => subscription.remove();
+  }, [activeCheckInId]);
 
   async function syncFromServer(id: string) {
     try {
@@ -138,8 +149,7 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
       try {
         await markSafetyCheckInSafe(activeCheckInId);
       } catch (err) {
-        // Even if the server call fails, still reflect safe locally, the
-        // person said they're safe, don't leave them stuck on a spinner.
+        // Even if the server call fails, still reflect safe locally.
       }
     }
     setStatus("safe");
@@ -188,137 +198,142 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.iconCircle}>
-        <Feather name="shield" size={22} color={colors.teal} />
-      </View>
-      <Text style={styles.title}>Evening walk</Text>
-      <Text style={styles.subtitle}>
-        Selina checks in once, at the time you choose. If you don't respond, your contacts are
-        notified automatically, you don't have to be holding the phone for that to happen.
-      </Text>
-
-      <Pressable
-        style={styles.contactRow}
-        onPress={() => navigation.navigate("EmergencyContact")}
-      >
-        <Feather name="user" size={14} color={colors.inkSoft} />
-        <Text style={styles.contactRowText}>
-          {emergencyContacts.length > 0
-            ? `${emergencyContacts.length} contact${emergencyContacts.length > 1 ? "s" : ""} set`
-            : "No emergency contacts set, tap to add one"}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.iconCircle}>
+          <Feather name="shield" size={22} color={colors.teal} />
+        </View>
+        <Text style={styles.title}>Evening walk</Text>
+        <Text style={styles.subtitle}>
+          Selina checks in once, at the time you choose. If you don't respond, your contacts are
+          notified automatically, you don't have to be holding the phone for that to happen.
         </Text>
-      </Pressable>
 
-      {status === "idle" && (
-        <View>
-          <Text style={styles.label}>Where are you headed? (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={destination}
-            onChangeText={setDestination}
-            placeholder="e.g. Ade's place"
-            placeholderTextColor={colors.inkSoft}
-          />
+        <Pressable
+          style={styles.contactRow}
+          onPress={() => navigation.navigate("EmergencyContact")}
+        >
+          <Feather name="user" size={14} color={colors.inkSoft} />
+          <Text style={styles.contactRowText}>
+            {emergencyContacts.length > 0
+              ? `${emergencyContacts.length} contact${emergencyContacts.length > 1 ? "s" : ""} set`
+              : "No emergency contacts set, tap to add one"}
+          </Text>
+        </Pressable>
 
-          <Text style={styles.label}>Who are you meeting? (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={meetingWho}
-            onChangeText={setMeetingWho}
-            placeholder="e.g. a new client"
-            placeholderTextColor={colors.inkSoft}
-          />
+        {status === "idle" && (
+          <View>
+            <Text style={styles.label}>Where are you headed? (optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={destination}
+              onChangeText={setDestination}
+              placeholder="e.g. Ade's place"
+              placeholderTextColor={colors.inkSoft}
+            />
 
-          <Text style={styles.label}>Anything that feels off right now? (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={riskNote}
-            onChangeText={setRiskNote}
-            placeholder="e.g. taxi driver seemed off"
-            placeholderTextColor={colors.inkSoft}
-          />
+            <Text style={styles.label}>Who are you meeting? (optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={meetingWho}
+              onChangeText={setMeetingWho}
+              placeholder="e.g. a new client"
+              placeholderTextColor={colors.inkSoft}
+            />
 
-          <Text style={styles.pickerLabel}>Check in after</Text>
-          <View style={styles.durationRow}>
-            {DURATION_OPTIONS.map((opt) => (
+            <Text style={styles.label}>Anything that feels off right now? (optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={riskNote}
+              onChangeText={setRiskNote}
+              placeholder="e.g. taxi driver seemed off"
+              placeholderTextColor={colors.inkSoft}
+            />
+
+            <Text style={styles.pickerLabel}>Check in after</Text>
+            <View style={styles.durationRow}>
+              {DURATION_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt.label}
+                  style={styles.durationButton}
+                  onPress={() => startCheckIn(opt.seconds)}
+                  disabled={loading}
+                >
+                  <Text style={styles.durationLabel}>{opt.label}</Text>
+                </Pressable>
+              ))}
               <Pressable
-                key={opt.label}
                 style={styles.durationButton}
-                onPress={() => startCheckIn(opt.seconds)}
+                onPress={() => setShowCustom(true)}
                 disabled={loading}
               >
-                <Text style={styles.durationLabel}>{opt.label}</Text>
-              </Pressable>
-            ))}
-            <Pressable
-              style={styles.durationButton}
-              onPress={() => setShowCustom(true)}
-              disabled={loading}
-            >
-              <Text style={styles.durationLabel}>Custom</Text>
-            </Pressable>
-          </View>
-
-          {showCustom && (
-            <View style={styles.customRow}>
-              <TextInput
-                style={styles.customInput}
-                value={customMinutes}
-                onChangeText={setCustomMinutes}
-                placeholder="Minutes"
-                placeholderTextColor={colors.inkSoft}
-                keyboardType="number-pad"
-              />
-              <Pressable style={styles.customStartButton} onPress={startCustom}>
-                <Text style={styles.customStartLabel}>Start</Text>
+                <Text style={styles.durationLabel}>Custom</Text>
               </Pressable>
             </View>
-          )}
 
-          {loading && <ActivityIndicator color={colors.teal} style={{ marginTop: space.md }} />}
-        </View>
-      )}
+            {showCustom && (
+              <View style={styles.customRow}>
+                <TextInput
+                  style={styles.customInput}
+                  value={customMinutes}
+                  onChangeText={setCustomMinutes}
+                  placeholder="Minutes"
+                  placeholderTextColor={colors.inkSoft}
+                  keyboardType="number-pad"
+                />
+                <Pressable style={styles.customStartButton} onPress={startCustom}>
+                  <Text style={styles.customStartLabel}>Start</Text>
+                </Pressable>
+              </View>
+            )}
 
-      {status === "counting" && (
-        <View style={styles.countdownBox}>
-          <Text style={styles.countdownNumber}>{formatTime(secondsLeft)}</Text>
-          <Text style={styles.countdownLabel}>until Selina checks on you</Text>
-          <Text style={styles.backgroundNote}>
-            This keeps running even if you close the app or your phone is put away.
-          </Text>
-          <Pressable style={styles.primaryButton} onPress={markSafe}>
-            <Text style={styles.primaryLabel}>I'm safe</Text>
-          </Pressable>
-          <Pressable style={styles.dangerButton} onPress={escalateNow}>
-            <Text style={styles.dangerLabel}>I feel unsafe right now</Text>
-          </Pressable>
-        </View>
-      )}
+            {loading && <ActivityIndicator color={colors.teal} style={{ marginTop: space.md }} />}
+          </View>
+        )}
 
-      {status === "safe" && (
-        <View style={styles.resultBox}>
-          <Text style={styles.resultTitle}>Good to know</Text>
-          <Text style={styles.resultDetail}>Logged as safe. No one else was notified.</Text>
-          <Pressable style={styles.secondaryButton} onPress={backToStart}>
-            <Text style={styles.secondaryLabel}>Start another check in</Text>
-          </Pressable>
-        </View>
-      )}
+        {status === "counting" && (
+          <View style={styles.countdownBox}>
+            <Text style={styles.countdownNumber}>{formatTime(secondsLeft)}</Text>
+            <Text style={styles.countdownLabel}>until Selina checks on you</Text>
+            <Text style={styles.backgroundNote}>
+              This keeps running even if you close the app or your phone is put away.
+            </Text>
+            <Pressable style={styles.primaryButton} onPress={markSafe}>
+              <Text style={styles.primaryLabel}>I'm safe</Text>
+            </Pressable>
+            <Pressable style={styles.dangerButton} onPress={escalateNow}>
+              <Text style={styles.dangerLabel}>I feel unsafe right now</Text>
+            </Pressable>
+          </View>
+        )}
 
-      {status === "missed" && (
-        <View style={[styles.resultBox, styles.resultBoxAlert]}>
-          <Text style={styles.resultTitle}>Check in missed, contacts already notified</Text>
-          <Text style={styles.resultDetail}>{missedMessage}</Text>
-          <Pressable style={styles.primaryButton} onPress={markSafe}>
-            <Text style={styles.primaryLabel}>I'm safe, false alarm</Text>
-          </Pressable>
-          <Pressable style={styles.escalateButton} onPress={escalateFromMissed}>
-            <Text style={styles.escalateLabel}>Who was notified?</Text>
-          </Pressable>
-        </View>
-      )}
-    </ScrollView>
+        {status === "safe" && (
+          <View style={styles.resultBox}>
+            <Text style={styles.resultTitle}>Good to know</Text>
+            <Text style={styles.resultDetail}>Logged as safe. No one else was notified.</Text>
+            <Pressable style={styles.secondaryButton} onPress={backToStart}>
+              <Text style={styles.secondaryLabel}>Start another check in</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {status === "missed" && (
+          <View style={[styles.resultBox, styles.resultBoxAlert]}>
+            <Text style={styles.resultTitle}>Check in missed, contacts already notified</Text>
+            <Text style={styles.resultDetail}>{missedMessage}</Text>
+            <Pressable style={styles.primaryButton} onPress={markSafe}>
+              <Text style={styles.primaryLabel}>I'm safe, false alarm</Text>
+            </Pressable>
+            <Pressable style={styles.escalateButton} onPress={escalateFromMissed}>
+              <Text style={styles.escalateLabel}>Who was notified?</Text>
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

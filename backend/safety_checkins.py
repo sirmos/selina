@@ -62,12 +62,13 @@ def _fire_escalation(checkin_id, orchestrator):
         detail_bits.append(f"meeting {trip['meeting_who']}")
     if trip.get("risk_note"):
         detail_bits.append(f"noted concern: {trip['risk_note']}")
-    context = ", ".join(detail_bits) if detail_bits else "no extra trip details were given"
+    context = ", ".join(detail_bits) if detail_bits else ""
 
     minutes = record["duration_seconds"] // 60
     event = {
         "type": "checkin_missed",
-        "planned_time": f"a check in scheduled {minutes} minutes ago, {context}",
+        "planned_time": f"{minutes} minutes ago",
+        "context": context,
     }
     result = orchestrator.handle_event(event)
 

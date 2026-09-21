@@ -15,6 +15,7 @@ import CompanionScreen from "./src/screens/CompanionScreen";
 import PaywallScreen from "./src/screens/PaywallScreen";
 import SafetyCheckInScreen from "./src/screens/SafetyCheckInScreen";
 import RightsSupportScreen from "./src/screens/RightsSupportScreen";
+import AcademicScreen from "./src/screens/AcademicScreen";
 import EmergencyContactScreen from "./src/screens/EmergencyContactScreen";
 import { colors } from "./src/theme/tokens";
 import { configureRevenueCat } from "./src/services/revenuecat";
@@ -67,6 +68,11 @@ export default function App() {
               name="RightsSupport"
               component={RightsSupportScreen}
               options={{ headerShown: true, title: "Your case" }}
+            />
+            <Stack.Screen
+              name="Academic"
+              component={AcademicScreen}
+              options={{ headerShown: true, title: "Academic" }}
             />
             <Stack.Screen
               name="EmergencyContact"

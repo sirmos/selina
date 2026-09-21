@@ -55,9 +55,8 @@ function AgentCard({ tag, title, detail, icon, accent, accentSoft, onPress }: Ca
 }
 
 export default function HomeScreen({ navigation }: Props) {
-  const { checkInStatus, caseEntries } = useSelinaState();
+  const { checkInStatus } = useSelinaState();
   const safetyCopy = safetyCardCopy(checkInStatus);
-  const latestCase = caseEntries[0];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -79,13 +78,13 @@ export default function HomeScreen({ navigation }: Props) {
       />
 
       <AgentCard
-        tag="Rights and support"
-        title={latestCase?.title ?? "Nothing logged yet"}
-        detail={latestCase?.detail ?? "Start a case whenever you need to."}
-        icon="file-text"
+        tag="Academic"
+        title="Track a deadline"
+        detail="Add what's due, Selina flags anything urgent."
+        icon="book-open"
         accent={colors.rose}
         accentSoft={colors.roseSoft}
-        onPress={() => navigation.navigate("RightsSupport")}
+        onPress={() => navigation.navigate("Academic")}
       />
 
       <AgentCard
@@ -159,15 +158,15 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontFamily: type.display,
-    fontSize: 18,
+    fontSize: 19,
     color: colors.ink,
     marginBottom: 4,
   },
   cardDetail: {
     fontFamily: type.body,
-    fontSize: 13.5,
+    fontSize: 14,
     color: colors.inkSoft,
-    lineHeight: 19,
+    lineHeight: 20,
   },
   chevron: { marginLeft: space.xs, marginTop: space.sm },
   plusBanner: {
@@ -195,9 +194,9 @@ const styles = StyleSheet.create({
   },
   plusDetail: {
     fontFamily: type.body,
-    fontSize: 13.5,
+    fontSize: 14,
     color: colors.paper,
     opacity: 0.85,
-    lineHeight: 19,
+    lineHeight: 20,
   },
 });

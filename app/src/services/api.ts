@@ -25,6 +25,19 @@ export async function reportMissedCheckIn(plannedTime) {
   return data.message;
 }
 
+export async function submitDeadline(title, dueDateISO) {
+  const response = await fetch(`${API_BASE_URL}/event`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "deadline_added", title, due_date: dueDateISO }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function submitCaseEntry(detail) {
   const data = await postEvent({ type: "case_entry_added", detail });
   return { message: data.message, flagged: data.action === "flag_for_review" };

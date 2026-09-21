@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSelinaState } from "../state/SelinaState";
@@ -17,55 +17,58 @@ export default function EmergencyContactScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconCircle}>
-        <Feather name="user-plus" size={22} color={colors.rose} />
-      </View>
-      <Text style={styles.title}>Emergency contacts</Text>
-      <Text style={styles.subtitle}>
-        Add as many people as you'd actually want reached, and however you'd want Selina to
-        reach them, a phone number, a WhatsApp, whatever's real for you.
-      </Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <View style={styles.container}>
+        <View style={styles.iconCircle}>
+          <Feather name="user-plus" size={22} color={colors.rose} />
+        </View>
+        <Text style={styles.title}>Emergency contacts</Text>
+        <Text style={styles.subtitle}>
+          Add as many people as you'd actually want reached, and however you'd want Selina to
+          reach them, a phone number, a WhatsApp, whatever's real for you.
+        </Text>
 
-      <FlatList
-        data={emergencyContacts}
-        keyExtractor={(c) => c.id}
-        style={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.contactCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.contactName}>{item.name}</Text>
-              <Text style={styles.contactMethod}>{item.reachMethod}</Text>
+        <FlatList
+          data={emergencyContacts}
+          keyExtractor={(c) => c.id}
+          style={styles.list}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <View style={styles.contactCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.contactName}>{item.name}</Text>
+                <Text style={styles.contactMethod}>{item.reachMethod}</Text>
+              </View>
+              <Pressable onPress={() => removeEmergencyContact(item.id)}>
+                <Feather name="x" size={18} color={colors.inkSoft} />
+              </Pressable>
             </View>
-            <Pressable onPress={() => removeEmergencyContact(item.id)}>
-              <Feather name="x" size={18} color={colors.inkSoft} />
-            </Pressable>
-          </View>
-        )}
-      />
+          )}
+        />
 
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="e.g. Amara"
-        placeholderTextColor={colors.inkSoft}
-      />
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="e.g. Amara"
+          placeholderTextColor={colors.inkSoft}
+        />
 
-      <Text style={styles.label}>How Selina should reach them</Text>
-      <TextInput
-        style={styles.input}
-        value={reachMethod}
-        onChangeText={setReachMethod}
-        placeholder="e.g. WhatsApp +234..., or call this number"
-        placeholderTextColor={colors.inkSoft}
-      />
+        <Text style={styles.label}>How Selina should reach them</Text>
+        <TextInput
+          style={styles.input}
+          value={reachMethod}
+          onChangeText={setReachMethod}
+          placeholder="e.g. WhatsApp +234..., or call this number"
+          placeholderTextColor={colors.inkSoft}
+        />
 
-      <Pressable style={styles.saveButton} onPress={save}>
-        <Text style={styles.saveLabel}>Add contact</Text>
-      </Pressable>
-    </View>
+        <Pressable style={styles.saveButton} onPress={save}>
+          <Text style={styles.saveLabel}>Add contact</Text>
+        </Pressable>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 

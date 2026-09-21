@@ -32,11 +32,18 @@ class SafetyAgent(Agent):
         raise ValueError(f"Safety Agent does not know how to handle event type: {event_type}")
 
     def _handle_checkin_missed(self, event: dict) -> dict:
+        planned_time = event.get("planned_time", "an earlier time")
+        context = event.get("context", "")
+
+        if context:
+            detail_sentence = f"A check in due {planned_time} was missed, {context}."
+        else:
+            detail_sentence = f"A check in due {planned_time} was missed."
+
         request = CompletionRequest(
             system_prompt=SAFETY_SYSTEM_PROMPT,
             user_prompt=(
-                f"A check in scheduled for {event.get('planned_time', 'an earlier time')} "
-                "was missed. Write one short message offering to reach the person's "
+                f"{detail_sentence} Write one short message offering to reach the person's "
                 "emergency contact, without assuming anything is wrong yet."
             ),
             tier="fast",
