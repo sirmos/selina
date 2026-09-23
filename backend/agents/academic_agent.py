@@ -1,6 +1,7 @@
 """
 Academic Agent. Tracks deadlines and gives a simple urgency read on how
-close one is, the smallest useful slice of academic support.
+close one is, plus open-ended conversational support: explaining
+concepts, generating practice questions, and walking through problems.
 """
 
 from datetime import datetime
@@ -10,8 +11,9 @@ from providers.base import CompletionRequest
 
 ACADEMIC_SYSTEM_PROMPT = (
     "You are the Academic Agent inside Selina, a support system for women. "
-    "You help with deadlines and study planning, plainly and encouragingly, "
-    "never guilt tripping about procrastination."
+    "You help with deadlines, study planning, explaining concepts, and "
+    "working through problems and practice questions, plainly and "
+    "encouragingly, never guilt tripping about procrastination."
 )
 
 
@@ -20,9 +22,14 @@ class AcademicAgent(Agent):
     domain_prompt = ACADEMIC_SYSTEM_PROMPT
 
     def handle(self, event: dict) -> dict:
-        if event.get("type") != "deadline_added":
-            raise ValueError(f"Academic Agent only handles type 'deadline_added', got: {event.get('type')}")
+        event_type = event.get("type")
+        if event_type == "deadline_added":
+            return self._handle_deadline(event)
+        if event_type == "message":
+            return self._handle_message(event)
+        raise ValueError(f"Academic Agent does not know how to handle event type: {event_type}")
 
+    def _handle_deadline(self, event: dict) -> dict:
         title = event.get("title", "an assignment")
         due_date_str = event.get("due_date")
 
@@ -54,5 +61,34 @@ class AcademicAgent(Agent):
             "action": "urgent_reminder" if urgent else "schedule_reminder",
             "days_remaining": days_remaining,
             "message": message,
+            "timeline_id": entry.id,
+        }
+
+    def _handle_message(self, event: dict) -> dict:
+        text = event.get("text", "")
+        if not text.strip():
+            raise ValueError("Academic Agent received an empty message")
+
+        request = CompletionRequest(
+            system_prompt=(
+                f"{ACADEMIC_SYSTEM_PROMPT} You can explain concepts, generate "
+                "practice questions, and walk through problems step by step, "
+                "in addition to tracking deadlines."
+            ),
+            user_prompt=text,
+            tier="deep",
+        )
+        reply = self.provider.complete(request)
+
+        entry = self.timeline.add(
+            agent=self.name,
+            kind="message",
+            summary="Academic conversation",
+            data={"from_user": text, "reply": reply},
+        )
+
+        return {
+            "action": "reply",
+            "message": reply,
             "timeline_id": entry.id,
         }

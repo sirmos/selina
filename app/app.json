@@ -5,11 +5,22 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/selina_icon_1024.png",
+    "splash": {
+      "image": "./assets/selina_icon_1024.png",
+      "backgroundColor": "#171012",
+      "resizeMode": "contain"
+    },
     "plugins": [
       "expo-asset"
     ],
     "android": {
-      "package": "com.sirmos.selinaapp"
+      "package": "com.sirmos.selinaapp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/selina_icon_1024.png",
+        "backgroundColor": "#171012"
+      },
+      "softwareKeyboardLayoutMode": "resize"
     },
     "ios": {
       "bundleIdentifier": "com.sirmos.selinaapp"
