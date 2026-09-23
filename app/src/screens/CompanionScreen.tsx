@@ -6,10 +6,10 @@ import {
   Pressable,
   FlatList,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

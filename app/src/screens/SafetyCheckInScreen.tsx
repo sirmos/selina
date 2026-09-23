@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput, ScrollView, AppState, Platform, KeyboardAvoidingView } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput, ScrollView, AppState, Platform } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { colors, type, space, radius } from "../theme/tokens";

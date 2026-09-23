@@ -20,6 +20,11 @@ export async function sendCompanionMessage(text) {
   return data.message;
 }
 
+export async function sendAcademicMessage(text) {
+  const data = await postEvent({ type: "academic_message", text });
+  return data.message;
+}
+
 export async function reportMissedCheckIn(plannedTime) {
   const data = await postEvent({ type: "checkin_missed", planned_time: plannedTime });
   return data.message;

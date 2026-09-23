@@ -1,21 +1,28 @@
 {
-  "cli": {
-    "version": ">= 24.3.0",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "autoIncrement": true
-    }
-  },
-  "submit": {
-    "production": {}
-  }
+    "cli":  {
+                "version":  "\u003e= 24.3.0",
+                "appVersionSource":  "remote"
+            },
+    "build":  {
+                  "development":  {
+                                      "developmentClient":  true,
+                                      "distribution":  "internal"
+                                  },
+                  "preview":  {
+                                  "distribution":  "internal",
+                                  "env":  {
+                                              "EXPO_PUBLIC_RC_IOS_KEY":  "test_VHguFLQOXmaliUCqaFDnDbHngfX",
+                                              "EXPO_PUBLIC_API_URL":  "http://192.168.0.141:5000",
+                                              "EXPO_PUBLIC_RC_ANDROID_KEY":  "test_VHguFLQOXmaliUCqaFDnDbHngfX"
+                                          }
+                              },
+                  "production":  {
+                                     "autoIncrement":  true
+                                 }
+              },
+    "submit":  {
+                   "production":  {
+
+                                  }
+               }
 }

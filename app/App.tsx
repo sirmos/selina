@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import {
   useFonts,
   Lora_600SemiBold,
@@ -50,42 +51,44 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SelinaProvider>
-        <NavigationContainer>
-          <StatusBar style="dark" />
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen
-              name="Companion"
-              component={CompanionScreen}
-              options={{ headerShown: true, title: "Companion" }}
-            />
-            <Stack.Screen
-              name="SafetyCheckIn"
-              component={SafetyCheckInScreen}
-              options={{ headerShown: true, title: "Safety check in" }}
-            />
-            <Stack.Screen
-              name="RightsSupport"
-              component={RightsSupportScreen}
-              options={{ headerShown: true, title: "Your case" }}
-            />
-            <Stack.Screen
-              name="Academic"
-              component={AcademicScreen}
-              options={{ headerShown: true, title: "Academic" }}
-            />
-            <Stack.Screen
-              name="EmergencyContact"
-              component={EmergencyContactScreen}
-              options={{ headerShown: true, title: "Emergency contact" }}
-            />
-            <Stack.Screen
-              name="Paywall"
-              component={PaywallScreen}
-              options={{ headerShown: true, title: "Selina Plus", presentation: "modal" }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <KeyboardProvider>
+          <NavigationContainer>
+            <StatusBar style="dark" />
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen
+                name="Companion"
+                component={CompanionScreen}
+                options={{ headerShown: true, title: "Companion" }}
+              />
+              <Stack.Screen
+                name="SafetyCheckIn"
+                component={SafetyCheckInScreen}
+                options={{ headerShown: true, title: "Safety check in" }}
+              />
+              <Stack.Screen
+                name="RightsSupport"
+                component={RightsSupportScreen}
+                options={{ headerShown: true, title: "Your case" }}
+              />
+              <Stack.Screen
+                name="Academic"
+                component={AcademicScreen}
+                options={{ headerShown: true, title: "Academic" }}
+              />
+              <Stack.Screen
+                name="EmergencyContact"
+                component={EmergencyContactScreen}
+                options={{ headerShown: true, title: "Emergency contact" }}
+              />
+              <Stack.Screen
+                name="Paywall"
+                component={PaywallScreen}
+                options={{ headerShown: true, title: "Selina Plus", presentation: "modal" }}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </KeyboardProvider>
       </SelinaProvider>
     </SafeAreaProvider>
   );

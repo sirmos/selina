@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList, Platform, ActivityIndicator } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
-import { submitDeadline } from "../services/api";
+import { submitDeadline, sendAcademicMessage } from "../services/api";
 
 type Deadline = {
   id: string;
@@ -12,11 +13,27 @@ type Deadline = {
   message: string;
 };
 
+type ChatMessage = {
+  id: string;
+  from: "user" | "selina";
+  text: string;
+};
+
+const opening: ChatMessage = {
+  id: "0",
+  from: "selina",
+  text: "Ask me to explain something, quiz you, or help you work through a problem.",
+};
+
 export default function AcademicScreen() {
   const [title, setTitle] = useState("");
   const [daysAway, setDaysAway] = useState("");
   const [saving, setSaving] = useState(false);
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([opening]);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
 
   async function addDeadline() {
     const days = parseInt(daysAway, 10);
@@ -49,6 +66,35 @@ export default function AcademicScreen() {
     }
   }
 
+  async function sendChat() {
+    const text = draft.trim();
+    if (!text || sending) return;
+
+    const userMessage: ChatMessage = { id: Date.now().toString(), from: "user", text };
+    setChatMessages((prev) => [...prev, userMessage]);
+    setDraft("");
+    setSending(true);
+
+    try {
+      const reply = await sendAcademicMessage(text);
+      setChatMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 1).toString(), from: "selina", text: reply },
+      ]);
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          from: "selina",
+          text: "I couldn't reach the server just now. Check that the backend is running and try again.",
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.container}>
@@ -57,8 +103,54 @@ export default function AcademicScreen() {
         </View>
         <Text style={styles.title}>Academic</Text>
         <Text style={styles.subtitle}>
-          Track what's due, Selina flags anything coming up fast.
+          Ask for help, work through a problem, or track what's due.
         </Text>
+
+        <FlatList
+          data={chatMessages}
+          keyExtractor={(m) => m.id}
+          style={styles.chatList}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <View
+              style={[
+                styles.bubble,
+                item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.bubbleText,
+                  item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
+                ]}
+              >
+                {item.text}
+              </Text>
+            </View>
+          )}
+          ListFooterComponent={
+            sending ? <ActivityIndicator color={colors.rose} style={{ marginTop: space.sm }} /> : null
+          }
+        />
+
+        <View style={styles.chatInputRow}>
+          <TextInput
+            style={styles.chatInput}
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Ask a question or paste a problem"
+            placeholderTextColor={colors.inkSoft}
+            multiline
+            editable={!sending}
+          />
+          <Pressable style={styles.sendButton} onPress={sendChat} disabled={sending}>
+            <Feather name="send" size={16} color={colors.paper} />
+          </Pressable>
+        </View>
+
+        <View style={styles.divider} />
+
+        <Text style={styles.sectionLabel}>Deadlines</Text>
 
         <FlatList
           data={deadlines}
@@ -128,7 +220,66 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
     lineHeight: 19,
   },
-  list: { maxHeight: 220, marginBottom: space.md },
+  chatList: { maxHeight: 260, marginBottom: space.sm },
+  bubble: {
+    maxWidth: "82%",
+    borderRadius: radius.lg,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    marginBottom: space.sm,
+  },
+  bubbleSelina: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignSelf: "flex-start",
+  },
+  bubbleUser: {
+    backgroundColor: colors.rose,
+    alignSelf: "flex-end",
+  },
+  bubbleText: { fontFamily: type.body, fontSize: 14, lineHeight: 20 },
+  bubbleTextSelina: { color: colors.ink },
+  bubbleTextUser: { color: colors.paper },
+  chatInputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: space.md,
+  },
+  chatInput: {
+    flex: 1,
+    fontFamily: type.body,
+    fontSize: 15,
+    color: colors.ink,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    maxHeight: 100,
+  },
+  sendButton: {
+    marginLeft: space.sm,
+    backgroundColor: colors.rose,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm + 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.line,
+    marginVertical: space.md,
+  },
+  sectionLabel: {
+    fontFamily: type.display,
+    fontSize: 16,
+    color: colors.ink,
+    marginBottom: space.sm,
+  },
+  list: { maxHeight: 180, marginBottom: space.md },
   deadlineCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
