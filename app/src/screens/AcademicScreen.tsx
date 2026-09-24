@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, FlatList, Platform, ActivityIndicator } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { submitDeadline, sendAcademicMessage } from "../services/api";
@@ -96,15 +96,14 @@ export default function AcademicScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={styles.container}>
-        <View style={styles.iconCircle}>
-          <Feather name="book-open" size={22} color={colors.rose} />
-        </View>
-        <Text style={styles.title}>Academic</Text>
-        <Text style={styles.subtitle}>
-          Ask for help, work through a problem, or track what's due.
-        </Text>
+    <KeyboardAwareScrollView contentContainerStyle={styles.container} bottomOffset={20}>
+      <View style={styles.iconCircle}>
+        <Feather name="book-open" size={22} color={colors.rose} />
+      </View>
+      <Text style={styles.title}>Academic</Text>
+      <Text style={styles.subtitle}>
+        Ask for help, work through a problem, or track what's due.
+      </Text>
 
         <FlatList
           data={chatMessages}
@@ -195,8 +194,7 @@ export default function AcademicScreen() {
             <Text style={styles.saveLabel}>Add deadline</Text>
           )}
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
