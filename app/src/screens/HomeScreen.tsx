@@ -79,8 +79,8 @@ export default function HomeScreen({ navigation }: Props) {
 
       <AgentCard
         tag="Academic"
-        title="Track a deadline"
-        detail="Add what's due, Selina flags anything urgent."
+        title="Ask, practice, or plan"
+        detail="Work through a problem, get quizzed, or track what's due."
         icon="book-open"
         accent={colors.rose}
         accentSoft={colors.roseSoft}

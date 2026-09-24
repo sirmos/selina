@@ -1,33 +1,26 @@
 // Selina design tokens
-// Direction: a quiet, trustworthy companion, not a clinical utility app.
-// Warm paper background so it feels human, deep ink and teal instead of the
-// generic dark mode plus single bright accent look. No cream and terracotta
-// combination, that reads as a generic AI-tool default, not this brand.
+// Direction: elegant and warm, matching the app icon's bordeaux and rose-gold
+// palette, while keeping strong readability on a light warm background.
 
 export const colors = {
-  paper: "#FBF6EE",       // warm background, close but distinct from generic cream
-  ink: "#20242B",         // near-black text, slightly warm
-  inkSoft: "#565B66",     // secondary text
-  teal: "#1F5C52",        // safety, and the primary brand color
-  tealDeep: "#153E38",    // pressed / active state
-  tealSoft: "#E4EFEC",    // soft tint for safety icon backgrounds
-  rose: "#B5566B",        // rights and support, and alerts
-  roseSoft: "#F5E6E9",    // soft tint for rights icon backgrounds
-  amber: "#A87428",       // companion, warmth without reaching for pink cliche
-  amberSoft: "#F3E9D8",   // soft tint for companion icon backgrounds
-  line: "#E4DCCB",        // hairline dividers on paper
+  paper: "#FAF3EC",       // warm ivory background
+  ink: "#241A1C",         // near-black text, warm undertone matching the icon
+  inkSoft: "#6B5A5E",     // secondary text, warm mauve-gray
+  teal: "#1F5C4E",        // safety, deep trustworthy green
+  tealDeep: "#12312B",    // pressed / active state
+  tealSoft: "#E3EFEC",    // soft tint for safety icon backgrounds
+  rose: "#6E1F2B",        // academic, rights and support — matches icon bordeaux
+  roseSoft: "#F1DEE1",    // soft tint for rose icon backgrounds
+  amber: "#B07A5C",       // companion, warm rose-gold matching the icon accent
+  amberSoft: "#F3E7DE",   // soft tint for companion icon backgrounds
+  line: "#E6DCD2",        // hairline dividers on paper
   card: "#FFFFFF",
-  cardBorder: "#EDE6D8",
+  cardBorder: "#EFE4DA",
 };
 
 export const type = {
-  // Display: a warm humanist serif for headings, gives Selina personality
-  // without reaching for the expected geometric sans, and without the
-  // eccentric swashes some display serifs (like Fraunces) put on letters
-  // such as J at small sizes.
   display: "Lora_600SemiBold",
   displayItalic: "Lora_500Medium_Italic",
-  // Body: a clean grotesque for everything functional.
   body: "WorkSans_400Regular",
   bodyMedium: "WorkSans_500Medium",
   bodySemiBold: "WorkSans_600SemiBold",
