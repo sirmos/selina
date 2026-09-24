@@ -15,13 +15,13 @@ async function postEvent(event) {
   return response.json();
 }
 
-export async function sendCompanionMessage(text) {
-  const data = await postEvent({ type: "message", text });
+export async function sendCompanionMessage(text, history = []) {
+  const data = await postEvent({ type: "message", text, history });
   return data.message;
 }
 
-export async function sendAcademicMessage(text) {
-  const data = await postEvent({ type: "academic_message", text });
+export async function sendAcademicMessage(text, history = []) {
+  const data = await postEvent({ type: "academic_message", text, history });
   return data.message;
 }
 

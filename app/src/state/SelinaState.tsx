@@ -15,6 +15,19 @@ export type EmergencyContact = {
   reachMethod: string;
 };
 
+export type ChatMessage = {
+  id: string;
+  from: "user" | "selina";
+  text: string;
+};
+
+export type Deadline = {
+  id: string;
+  title: string;
+  dueDateISO: string;
+  message: string;
+};
+
 type SelinaState = {
   checkInStatus: CheckInStatus;
   setCheckInStatus: (status: CheckInStatus) => void;
@@ -25,9 +38,30 @@ type SelinaState = {
   removeEmergencyContact: (id: string) => void;
   activeCheckInId: string | null;
   setActiveCheckInId: (id: string | null) => void;
+
+  companionMessages: ChatMessage[];
+  addCompanionMessage: (message: Omit<ChatMessage, "id">) => void;
+
+  academicMessages: ChatMessage[];
+  addAcademicMessage: (message: Omit<ChatMessage, "id">) => void;
+
+  deadlines: Deadline[];
+  addDeadline: (deadline: Omit<Deadline, "id">) => void;
 };
 
 const SelinaContext = createContext<SelinaState | undefined>(undefined);
+
+const companionOpening: ChatMessage = {
+  id: "companion-0",
+  from: "selina",
+  text: "I'm here. Take your time, there's no rush to explain everything at once.",
+};
+
+const academicOpening: ChatMessage = {
+  id: "academic-0",
+  from: "selina",
+  text: "Ask me to explain something, quiz you, or help you work through a problem.",
+};
 
 export function SelinaProvider({ children }: { children: ReactNode }) {
   const [checkInStatus, setCheckInStatus] = useState<CheckInStatus>("none");
@@ -41,6 +75,10 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
       date: "3 days ago",
     },
   ]);
+
+  const [companionMessages, setCompanionMessages] = useState<ChatMessage[]>([companionOpening]);
+  const [academicMessages, setAcademicMessages] = useState<ChatMessage[]>([academicOpening]);
+  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
 
   function addCaseEntry(entry: Omit<CaseEntry, "id" | "date">) {
     setCaseEntries((prev) => [
@@ -57,6 +95,18 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
     setEmergencyContacts((prev) => prev.filter((c) => c.id !== id));
   }
 
+  function addCompanionMessage(message: Omit<ChatMessage, "id">) {
+    setCompanionMessages((prev) => [...prev, { ...message, id: `${Date.now()}-${prev.length}` }]);
+  }
+
+  function addAcademicMessage(message: Omit<ChatMessage, "id">) {
+    setAcademicMessages((prev) => [...prev, { ...message, id: `${Date.now()}-${prev.length}` }]);
+  }
+
+  function addDeadline(deadline: Omit<Deadline, "id">) {
+    setDeadlines((prev) => [{ ...deadline, id: `${Date.now()}` }, ...prev]);
+  }
+
   return (
     <SelinaContext.Provider
       value={{
@@ -69,6 +119,12 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
         removeEmergencyContact,
         activeCheckInId,
         setActiveCheckInId,
+        companionMessages,
+        addCompanionMessage,
+        academicMessages,
+        addAcademicMessage,
+        deadlines,
+        addDeadline,
       }}
     >
       {children}

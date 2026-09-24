@@ -8,94 +8,81 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sendCompanionMessage } from "../services/api";
-
-type Message = {
-  id: string;
-  from: "user" | "selina";
-  text: string;
-};
-
-const opening: Message = {
-  id: "0",
-  from: "selina",
-  text: "I'm here. Take your time, there's no rush to explain everything at once.",
-};
+import { useSelinaState } from "../state/SelinaState";
 
 export default function CompanionScreen() {
   const insets = useSafeAreaInsets();
-  const [messages, setMessages] = useState<Message[]>([opening]);
+  const { companionMessages, addCompanionMessage } = useSelinaState();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+
+  async function copyMessage(text: string) {
+    await Clipboard.setStringAsync(text);
+    Alert.alert("Copied", "Message copied to clipboard.");
+  }
 
   async function send() {
     const text = draft.trim();
     if (!text || sending) return;
 
-    const userMessage: Message = { id: Date.now().toString(), from: "user", text };
-    setMessages((prev) => [...prev, userMessage]);
+    const history = companionMessages.map((m) => ({ role: m.from === "user" ? "user" : "assistant", text: m.text }));
+
+    addCompanionMessage({ from: "user", text });
     setDraft("");
     setSending(true);
 
     try {
-      const reply = await sendCompanionMessage(text);
-      setMessages((prev) => [
-        ...prev,
-        { id: (Date.now() + 1).toString(), from: "selina", text: reply },
-      ]);
+      const reply = await sendCompanionMessage(text, history);
+      addCompanionMessage({ from: "selina", text: reply });
     } catch (err) {
-      // The backend might not be running yet, this keeps the screen usable
-      // in that case instead of failing silently or crashing.
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          from: "selina",
-          text: "I couldn't reach the server just now. Check that the backend is running and try again.",
-        },
-      ]);
+      addCompanionMessage({
+        from: "selina",
+        text: "I couldn't reach the server just now. Check that the backend is running and try again.",
+      });
     } finally {
       setSending(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <FlatList
-        data={messages}
+        data={companionMessages}
         keyExtractor={(m) => m.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View
-            style={[
-              styles.bubble,
-              item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
-            ]}
-          >
-            <Text
+          <Pressable onLongPress={() => copyMessage(item.text)}>
+            <View
               style={[
-                styles.bubbleText,
-                item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
+                styles.bubble,
+                item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
               ]}
             >
-              {item.text}
-            </Text>
-          </View>
+              <Text
+                style={[
+                  styles.bubbleText,
+                  item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
+                ]}
+              >
+                {item.text}
+              </Text>
+            </View>
+          </Pressable>
         )}
         ListFooterComponent={
           sending ? <ActivityIndicator color={colors.teal} style={{ marginTop: space.sm }} /> : null
         }
       />
       <KeyboardStickyView>
-        <View style={[styles.inputRow, { paddingBottom: insets.bottom + 60 }]}>
+        <View style={[styles.inputRow, { paddingBottom: insets.bottom + space.sm }]}>
           <TextInput
             style={styles.input}
             value={draft}
@@ -168,11 +155,3 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
-
-
-
-
-
-
-
-

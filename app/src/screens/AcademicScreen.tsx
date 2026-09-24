@@ -1,9 +1,22 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList, Platform, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  FlatList,
+  Platform,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { KeyboardAvoidingView, KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, type, space, radius } from "../theme/tokens";
 import { submitDeadline, sendAcademicMessage } from "../services/api";
+import { useSelinaState } from "../state/SelinaState";
 
 type Deadline = {
   id: string;
@@ -19,21 +32,14 @@ type ChatMessage = {
   text: string;
 };
 
-const opening: ChatMessage = {
-  id: "0",
-  from: "selina",
-  text: "Ask me to explain something, quiz you, or help you work through a problem.",
-};
-
 export default function AcademicScreen() {
+  const insets = useSafeAreaInsets();
+  const { academicMessages, addAcademicMessage, deadlines, addDeadline: addStoredDeadline } = useSelinaState();
   const [tab, setTab] = useState<"chat" | "deadlines">("chat");
 
   const [title, setTitle] = useState("");
   const [daysAway, setDaysAway] = useState("");
   const [saving, setSaving] = useState(false);
-  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
-
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([opening]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -48,16 +54,11 @@ export default function AcademicScreen() {
       const isoDate = dueDate.toISOString().split("T")[0];
 
       const result = await submitDeadline(title.trim(), isoDate);
-      setDeadlines((prev) => [
-        {
-          id: `${Date.now()}`,
-          title: title.trim(),
-          daysAway: result.days_remaining ?? days,
-          urgent: result.action === "urgent_reminder",
-          message: result.message || "",
-        },
-        ...prev,
-      ]);
+      addStoredDeadline({
+        title: title.trim(),
+        dueDateISO: isoDate,
+        message: result.message || "",
+      });
       setTitle("");
       setDaysAway("");
     } catch (err) {
@@ -72,26 +73,19 @@ export default function AcademicScreen() {
     const text = draft.trim();
     if (!text || sending) return;
 
-    const userMessage: ChatMessage = { id: Date.now().toString(), from: "user", text };
-    setChatMessages((prev) => [...prev, userMessage]);
+    const history = academicMessages.map((m) => ({ role: m.from === "user" ? "user" : "assistant", text: m.text }));
+    addAcademicMessage({ from: "user", text });
     setDraft("");
     setSending(true);
 
     try {
-      const reply = await sendAcademicMessage(text);
-      setChatMessages((prev) => [
-        ...prev,
-        { id: (Date.now() + 1).toString(), from: "selina", text: reply },
-      ]);
+      const reply = await sendAcademicMessage(text, history);
+      addAcademicMessage({ from: "selina", text: reply });
     } catch (err) {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          from: "selina",
-          text: "I couldn't reach the server just now. Check that the backend is running and try again.",
-        },
-      ]);
+      addAcademicMessage({
+        from: "selina",
+        text: "I couldn't reach the server just now. Check that the backend is running and try again.",
+      });
     } finally {
       setSending(false);
     }
@@ -127,34 +121,36 @@ export default function AcademicScreen() {
       {tab === "chat" ? (
         <KeyboardAvoidingView style={styles.flexArea} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <FlatList
-            data={chatMessages}
+            data={academicMessages}
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.chatListContent}
             style={styles.flexArea}
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
-              <View
-                style={[
-                  styles.bubble,
-                  item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
-                ]}
-              >
-                <Text
+              <Pressable onLongPress={() => Clipboard.setStringAsync(item.text).then(() => Alert.alert("Copied", "Message copied to clipboard."))}>
+                <View
                   style={[
-                    styles.bubbleText,
-                    item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
+                    styles.bubble,
+                    item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
                   ]}
                 >
-                  {item.text}
-                </Text>
-              </View>
+                  <Text
+                    style={[
+                      styles.bubbleText,
+                      item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
+                    ]}
+                  >
+                    {item.text}
+                  </Text>
+                </View>
+              </Pressable>
             )}
             ListFooterComponent={
               sending ? <ActivityIndicator color={colors.rose} style={{ marginTop: space.sm }} /> : null
             }
           />
           <KeyboardStickyView>
-            <View style={styles.chatInputRow}>
+            <View style={[styles.chatInputRow, { paddingBottom: insets.bottom + space.sm }]}>
               <TextInput
                 style={styles.chatInput}
                 value={draft}
@@ -209,19 +205,24 @@ export default function AcademicScreen() {
           {deadlines.length === 0 ? (
             <Text style={styles.emptyText}>Nothing tracked yet, add your first deadline above.</Text>
           ) : (
-            deadlines.map((item) => (
-              <View
-                key={item.id}
-                style={[styles.deadlineCard, item.urgent && styles.deadlineCardUrgent]}
-              >
-                <Text style={styles.deadlineTitle}>{item.title}</Text>
-                <Text style={styles.deadlineDays}>
-                  {item.daysAway <= 0 ? "Due today" : `${item.daysAway} day${item.daysAway > 1 ? "s" : ""} away`}
-                  {item.urgent ? ", urgent" : ""}
-                </Text>
-                <Text style={styles.deadlineMessage}>{item.message}</Text>
-              </View>
-            ))
+            deadlines.map((item) => {
+              const daysAway = Math.ceil((new Date(item.dueDateISO).getTime() - Date.now()) / 86400000);
+              const urgent = daysAway <= 2;
+
+              return (
+                <View
+                  key={item.id}
+                  style={[styles.deadlineCard, urgent && styles.deadlineCardUrgent]}
+                >
+                  <Text style={styles.deadlineTitle}>{item.title}</Text>
+                  <Text style={styles.deadlineDays}>
+                    {daysAway <= 0 ? "Due today" : `${daysAway} day${daysAway > 1 ? "s" : ""} away`}
+                    {urgent ? ", urgent" : ""}
+                  </Text>
+                  <Text style={styles.deadlineMessage}>{item.message}</Text>
+                </View>
+              );
+            })
           )}
         </KeyboardAwareScrollView>
       )}

@@ -69,13 +69,16 @@ class AcademicAgent(Agent):
         if not text.strip():
             raise ValueError("Academic Agent received an empty message")
 
+        history = event.get("history", [])
+
         request = CompletionRequest(
             system_prompt=(
                 f"{ACADEMIC_SYSTEM_PROMPT} You can explain concepts, generate "
                 "practice questions, and walk through problems step by step, "
-                "in addition to tracking deadlines."
+                "in addition to tracking deadlines. Reply in plain conversational text only, "
+                "never use Markdown formatting like #, *, or bullet symbols."
             ),
-            user_prompt=text,
+            user_prompt=(("\n".join(f"{h['role']}: {h['text']}" for h in history[-8:]) + f"\nuser: {text}") if history else text),
             tier="deep",
         )
         reply = self.provider.complete(request)
