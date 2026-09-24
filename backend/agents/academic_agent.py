@@ -25,7 +25,7 @@ class AcademicAgent(Agent):
         event_type = event.get("type")
         if event_type == "deadline_added":
             return self._handle_deadline(event)
-        if event_type == "message":
+        if event_type == "academic_message":
             return self._handle_message(event)
         raise ValueError(f"Academic Agent does not know how to handle event type: {event_type}")
 

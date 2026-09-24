@@ -29,6 +29,7 @@ EVENT_ROUTES = {
     "message": "companion",
     "case_entry_added": "rights",
     "welfare_checkin": "welfare",
+    "academic_message": "academic",
     "deadline_added": "academic",
     "application_logged": "career",
     "application_status_check": "career",
