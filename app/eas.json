@@ -12,7 +12,7 @@
                                   "distribution":  "internal",
                                   "env":  {
                                               "EXPO_PUBLIC_RC_IOS_KEY":  "test_VHguFLQOXmaliUCqaFDnDbHngfX",
-                                              "EXPO_PUBLIC_API_URL":  "http://192.168.0.141:5000",
+                                              "EXPO_PUBLIC_API_URL":  "https://selina-cvoe.onrender.com",
                                               "EXPO_PUBLIC_RC_ANDROID_KEY":  "goog_eIYQhcShAjiHHdOPJhaMDfiSzSM"
                                           }
                               },
