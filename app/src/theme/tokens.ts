@@ -13,6 +13,8 @@ export const colors = {
   roseSoft: "#F1DEE1",    // soft tint for rose icon backgrounds
   amber: "#B07A5C",       // companion, warm rose-gold matching the icon accent
   amberSoft: "#F3E7DE",   // soft tint for companion icon backgrounds
+  plum: "#4A2545",        // health, distinct from safety's teal
+  plumSoft: "#EBDFE8",    // soft tint for health icon backgrounds
   line: "#E6DCD2",        // hairline dividers on paper
   card: "#FFFFFF",
   cardBorder: "#EFE4DA",

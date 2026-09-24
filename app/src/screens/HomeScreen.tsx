@@ -78,6 +78,16 @@ export default function HomeScreen({ navigation }: Props) {
       />
 
       <AgentCard
+        tag="Health"
+        title="Cycle and medication"
+        detail="Track your cycle, or set up medication reminders."
+        icon="heart"
+        accent={colors.plum}
+        accentSoft={colors.plumSoft}
+        onPress={() => navigation.navigate("Health")}
+      />
+
+      <AgentCard
         tag="Academic"
         title="Ask, practice, or plan"
         detail="Work through a problem, get quizzed, or track what's due."

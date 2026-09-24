@@ -28,6 +28,18 @@ export type Deadline = {
   message: string;
 };
 
+export type CycleResult = {
+  computed: any;
+  message: string;
+};
+
+export type Medication = {
+  id: string;
+  name: string;
+  doses: string[];
+  message: string;
+};
+
 type SelinaState = {
   checkInStatus: CheckInStatus;
   setCheckInStatus: (status: CheckInStatus) => void;
@@ -44,6 +56,11 @@ type SelinaState = {
 
   academicMessages: ChatMessage[];
   addAcademicMessage: (message: Omit<ChatMessage, "id">) => void;
+
+  cycleResult: CycleResult | null;
+  setCycleResult: (result: CycleResult | null) => void;
+  medications: Medication[];
+  addMedication: (medication: Omit<Medication, "id">) => void;
 
   deadlines: Deadline[];
   addDeadline: (deadline: Omit<Deadline, "id">) => void;
@@ -78,6 +95,8 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
 
   const [companionMessages, setCompanionMessages] = useState<ChatMessage[]>([companionOpening]);
   const [academicMessages, setAcademicMessages] = useState<ChatMessage[]>([academicOpening]);
+  const [cycleResult, setCycleResult] = useState<CycleResult | null>(null);
+  const [medications, setMedications] = useState<Medication[]>([]);
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
 
   function addCaseEntry(entry: Omit<CaseEntry, "id" | "date">) {
@@ -107,6 +126,10 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
     setDeadlines((prev) => [{ ...deadline, id: `${Date.now()}` }, ...prev]);
   }
 
+  function addMedication(medication: Omit<Medication, "id">) {
+    setMedications((prev) => [{ ...medication, id: `${Date.now()}` }, ...prev]);
+  }
+
   return (
     <SelinaContext.Provider
       value={{
@@ -123,6 +146,10 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
         addCompanionMessage,
         academicMessages,
         addAcademicMessage,
+        cycleResult,
+        setCycleResult,
+        medications,
+        addMedication,
         deadlines,
         addDeadline,
       }}

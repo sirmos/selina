@@ -15,6 +15,7 @@ import HomeScreen from "./src/screens/HomeScreen";
 import CompanionScreen from "./src/screens/CompanionScreen";
 import PaywallScreen from "./src/screens/PaywallScreen";
 import SafetyCheckInScreen from "./src/screens/SafetyCheckInScreen";
+import HealthScreen from "./src/screens/HealthScreen";
 import RightsSupportScreen from "./src/screens/RightsSupportScreen";
 import AcademicScreen from "./src/screens/AcademicScreen";
 import EmergencyContactScreen from "./src/screens/EmergencyContactScreen";
@@ -65,6 +66,11 @@ export default function App() {
                 name="SafetyCheckIn"
                 component={SafetyCheckInScreen}
                 options={{ headerShown: true, title: "Safety check in" }}
+              />
+              <Stack.Screen
+                name="Health"
+                component={HealthScreen}
+                options={{ headerShown: true, title: "Health" }}
               />
               <Stack.Screen
                 name="RightsSupport"

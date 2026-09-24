@@ -25,6 +25,27 @@ export async function sendAcademicMessage(text, history = []) {
   return data.message;
 }
 
+export async function calculateCycle(startDate, cycleLengthDays, periodLengthDays) {
+  const data = await postEvent({
+    type: "cycle_calculate",
+    start_date: startDate,
+    cycle_length_days: cycleLengthDays,
+    period_length_days: periodLengthDays,
+  });
+  return data;
+}
+
+export async function addMedication(name, scheduleType, startTime, options) {
+  const data = await postEvent({
+    type: "medication_added",
+    name,
+    schedule_type: scheduleType,
+    start_time: startTime,
+    ...options,
+  });
+  return data;
+}
+
 export async function reportMissedCheckIn(plannedTime) {
   const data = await postEvent({ type: "checkin_missed", planned_time: plannedTime });
   return data.message;
