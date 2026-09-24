@@ -9,7 +9,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -94,20 +94,22 @@ export default function CompanionScreen() {
           sending ? <ActivityIndicator color={colors.teal} style={{ marginTop: space.sm }} /> : null
         }
       />
-      <View style={[styles.inputRow, { paddingBottom: insets.bottom + 60 }]}>
-        <TextInput
-          style={styles.input}
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Write what's on your mind"
-          placeholderTextColor={colors.inkSoft}
-          multiline
-          editable={!sending}
-        />
-        <Pressable style={styles.sendButton} onPress={send} disabled={sending}>
-          <Feather name="send" size={16} color={colors.paper} />
-        </Pressable>
-      </View>
+      <KeyboardStickyView>
+        <View style={[styles.inputRow, { paddingBottom: insets.bottom + 60 }]}>
+          <TextInput
+            style={styles.input}
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Write what's on your mind"
+            placeholderTextColor={colors.inkSoft}
+            multiline
+            editable={!sending}
+          />
+          <Pressable style={styles.sendButton} onPress={send} disabled={sending}>
+            <Feather name="send" size={16} color={colors.paper} />
+          </Pressable>
+        </View>
+      </KeyboardStickyView>
     </KeyboardAvoidingView>
   );
 }

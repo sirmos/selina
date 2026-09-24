@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, TextInput, ScrollView, AppState, Platform } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { colors, type, space, radius } from "../theme/tokens";
@@ -199,14 +199,10 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.iconCircle}>
-          <Feather name="shield" size={22} color={colors.teal} />
-        </View>
+    <KeyboardAwareScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bottomOffset={20}>
+      <View style={styles.iconCircle}>
+        <Feather name="shield" size={22} color={colors.teal} />
+      </View>
         <Text style={styles.title}>Evening walk</Text>
         <Text style={styles.subtitle}>
           Selina checks in once, at the time you choose. If you don't respond, your contacts are
@@ -333,8 +329,7 @@ export default function SafetyCheckInScreen({ navigation }: { navigation: any })
             </Pressable>
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
