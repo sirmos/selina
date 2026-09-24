@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, FlatList, Platform, ActivityIndicator } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView, KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
 import { submitDeadline, sendAcademicMessage } from "../services/api";
@@ -26,6 +26,8 @@ const opening: ChatMessage = {
 };
 
 export default function AcademicScreen() {
+  const [tab, setTab] = useState<"chat" | "deadlines">("chat");
+
   const [title, setTitle] = useState("");
   const [daysAway, setDaysAway] = useState("");
   const [saving, setSaving] = useState(false);
@@ -96,110 +98,141 @@ export default function AcademicScreen() {
   }
 
   return (
-    <KeyboardAwareScrollView contentContainerStyle={styles.container} bottomOffset={20}>
-      <View style={styles.iconCircle}>
-        <Feather name="book-open" size={22} color={colors.rose} />
-      </View>
-      <Text style={styles.title}>Academic</Text>
-      <Text style={styles.subtitle}>
-        Ask for help, work through a problem, or track what's due.
-      </Text>
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <View style={styles.iconCircle}>
+          <Feather name="book-open" size={22} color={colors.rose} />
+        </View>
+        <Text style={styles.title}>Academic</Text>
+        <Text style={styles.subtitle}>
+          Ask for help, work through a problem, or track what's due.
+        </Text>
 
-        <FlatList
-          data={chatMessages}
-          keyExtractor={(m) => m.id}
-          style={styles.chatList}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.bubble,
-                item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.bubbleText,
-                  item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
-                ]}
-              >
-                {item.text}
-              </Text>
-            </View>
-          )}
-          ListFooterComponent={
-            sending ? <ActivityIndicator color={colors.rose} style={{ marginTop: space.sm }} /> : null
-          }
-        />
-
-        <View style={styles.chatInputRow}>
-          <TextInput
-            style={styles.chatInput}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Ask a question or paste a problem"
-            placeholderTextColor={colors.inkSoft}
-            multiline
-            editable={!sending}
-          />
-          <Pressable style={styles.sendButton} onPress={sendChat} disabled={sending}>
-            <Feather name="send" size={16} color={colors.paper} />
+        <View style={styles.tabRow}>
+          <Pressable
+            style={[styles.tabButton, tab === "chat" && styles.tabButtonActive]}
+            onPress={() => setTab("chat")}
+          >
+            <Text style={[styles.tabLabel, tab === "chat" && styles.tabLabelActive]}>Chat</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tabButton, tab === "deadlines" && styles.tabButtonActive]}
+            onPress={() => setTab("deadlines")}
+          >
+            <Text style={[styles.tabLabel, tab === "deadlines" && styles.tabLabelActive]}>Deadlines</Text>
           </Pressable>
         </View>
+      </View>
 
-        <View style={styles.divider} />
-
-        <Text style={styles.sectionLabel}>Deadlines</Text>
-
-        <FlatList
-          data={deadlines}
-          keyExtractor={(d) => d.id}
-          style={styles.list}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <View style={[styles.deadlineCard, item.urgent && styles.deadlineCardUrgent]}>
-              <Text style={styles.deadlineTitle}>{item.title}</Text>
-              <Text style={styles.deadlineDays}>
-                {item.daysAway <= 0 ? "Due today" : `${item.daysAway} day${item.daysAway > 1 ? "s" : ""} away`}
-                {item.urgent ? ", urgent" : ""}
-              </Text>
-              <Text style={styles.deadlineMessage}>{item.message}</Text>
+      {tab === "chat" ? (
+        <KeyboardAvoidingView style={styles.flexArea} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <FlatList
+            data={chatMessages}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.chatListContent}
+            style={styles.flexArea}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.bubble,
+                  item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
+                  ]}
+                >
+                  {item.text}
+                </Text>
+              </View>
+            )}
+            ListFooterComponent={
+              sending ? <ActivityIndicator color={colors.rose} style={{ marginTop: space.sm }} /> : null
+            }
+          />
+          <KeyboardStickyView>
+            <View style={styles.chatInputRow}>
+              <TextInput
+                style={styles.chatInput}
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Ask a question or paste a problem"
+                placeholderTextColor={colors.inkSoft}
+                multiline
+                editable={!sending}
+              />
+              <Pressable style={styles.sendButton} onPress={sendChat} disabled={sending}>
+                <Feather name="send" size={16} color={colors.paper} />
+              </Pressable>
             </View>
-          )}
-        />
+          </KeyboardStickyView>
+        </KeyboardAvoidingView>
+      ) : (
+        <KeyboardAwareScrollView
+          style={styles.flexArea}
+          contentContainerStyle={styles.deadlinesContent}
+          bottomOffset={20}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.label}>What's due?</Text>
+          <TextInput
+            style={styles.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Statistics assignment"
+            placeholderTextColor={colors.inkSoft}
+          />
 
-        <Text style={styles.label}>What's due?</Text>
-        <TextInput
-          style={styles.input}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="e.g. Statistics assignment"
-          placeholderTextColor={colors.inkSoft}
-        />
+          <Text style={styles.label}>Days from now</Text>
+          <TextInput
+            style={styles.input}
+            value={daysAway}
+            onChangeText={setDaysAway}
+            placeholder="e.g. 3"
+            placeholderTextColor={colors.inkSoft}
+            keyboardType="number-pad"
+          />
 
-        <Text style={styles.label}>Days from now</Text>
-        <TextInput
-          style={styles.input}
-          value={daysAway}
-          onChangeText={setDaysAway}
-          placeholder="e.g. 3"
-          placeholderTextColor={colors.inkSoft}
-          keyboardType="number-pad"
-        />
+          <Pressable style={styles.saveButton} onPress={addDeadline} disabled={saving}>
+            {saving ? (
+              <ActivityIndicator color={colors.paper} size="small" />
+            ) : (
+              <Text style={styles.saveLabel}>Add deadline</Text>
+            )}
+          </Pressable>
 
-        <Pressable style={styles.saveButton} onPress={addDeadline} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator color={colors.paper} size="small" />
+          <View style={styles.divider} />
+
+          {deadlines.length === 0 ? (
+            <Text style={styles.emptyText}>Nothing tracked yet, add your first deadline above.</Text>
           ) : (
-            <Text style={styles.saveLabel}>Add deadline</Text>
+            deadlines.map((item) => (
+              <View
+                key={item.id}
+                style={[styles.deadlineCard, item.urgent && styles.deadlineCardUrgent]}
+              >
+                <Text style={styles.deadlineTitle}>{item.title}</Text>
+                <Text style={styles.deadlineDays}>
+                  {item.daysAway <= 0 ? "Due today" : `${item.daysAway} day${item.daysAway > 1 ? "s" : ""} away`}
+                  {item.urgent ? ", urgent" : ""}
+                </Text>
+                <Text style={styles.deadlineMessage}>{item.message}</Text>
+              </View>
+            ))
           )}
-        </Pressable>
-    </KeyboardAwareScrollView>
+        </KeyboardAwareScrollView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.paper, padding: space.lg, paddingTop: space.xxl },
+  screen: { flex: 1, backgroundColor: colors.paper },
+  flexArea: { flex: 1 },
+  header: { padding: space.lg, paddingTop: space.xxl, paddingBottom: space.sm },
   iconCircle: {
     width: 48,
     height: 48,
@@ -218,7 +251,32 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
     lineHeight: 19,
   },
-  chatList: { maxHeight: 260, marginBottom: space.sm },
+  tabRow: {
+    flexDirection: "row",
+    backgroundColor: colors.card,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+    alignItems: "center",
+  },
+  tabButtonActive: {
+    backgroundColor: colors.rose,
+  },
+  tabLabel: {
+    fontFamily: type.bodySemiBold,
+    fontSize: 13.5,
+    color: colors.inkSoft,
+  },
+  tabLabelActive: {
+    color: colors.paper,
+  },
+  chatListContent: { padding: space.lg, paddingTop: space.sm, paddingBottom: space.md },
   bubble: {
     maxWidth: "82%",
     borderRadius: radius.lg,
@@ -236,13 +294,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.rose,
     alignSelf: "flex-end",
   },
-  bubbleText: { fontFamily: type.body, fontSize: 14, lineHeight: 20 },
+  bubbleText: { fontFamily: type.body, fontSize: 15, lineHeight: 21 },
   bubbleTextSelina: { color: colors.ink },
   bubbleTextUser: { color: colors.paper },
   chatInputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginBottom: space.md,
+    padding: space.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.paper,
   },
   chatInput: {
     flex: 1,
@@ -255,7 +316,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
-    maxHeight: 100,
+    maxHeight: 120,
   },
   sendButton: {
     marginLeft: space.sm,
@@ -266,30 +327,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.line,
-    marginVertical: space.md,
-  },
-  sectionLabel: {
-    fontFamily: type.display,
-    fontSize: 16,
-    color: colors.ink,
-    marginBottom: space.sm,
-  },
-  list: { maxHeight: 180, marginBottom: space.md },
-  deadlineCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.md,
-    padding: space.md,
-    marginBottom: space.sm,
-  },
-  deadlineCardUrgent: { borderColor: colors.rose },
-  deadlineTitle: { fontFamily: type.bodySemiBold, fontSize: 15, color: colors.ink },
-  deadlineDays: { fontFamily: type.bodySemiBold, fontSize: 12, color: colors.rose, marginTop: 2 },
-  deadlineMessage: { fontFamily: type.body, fontSize: 13, color: colors.inkSoft, marginTop: 4, lineHeight: 18 },
+  deadlinesContent: { padding: space.lg, paddingTop: space.md, paddingBottom: space.xxl },
   label: {
     fontFamily: type.bodySemiBold,
     fontSize: 13,
@@ -316,4 +354,28 @@ const styles = StyleSheet.create({
     marginTop: space.lg,
   },
   saveLabel: { fontFamily: type.bodySemiBold, fontSize: 15, color: colors.paper },
+  divider: {
+    height: 1,
+    backgroundColor: colors.line,
+    marginVertical: space.lg,
+  },
+  emptyText: {
+    fontFamily: type.body,
+    fontSize: 14,
+    color: colors.inkSoft,
+    textAlign: "center",
+    marginTop: space.md,
+  },
+  deadlineCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    padding: space.md,
+    marginBottom: space.sm,
+  },
+  deadlineCardUrgent: { borderColor: colors.rose },
+  deadlineTitle: { fontFamily: type.bodySemiBold, fontSize: 16, color: colors.ink },
+  deadlineDays: { fontFamily: type.bodySemiBold, fontSize: 13, color: colors.rose, marginTop: 2 },
+  deadlineMessage: { fontFamily: type.body, fontSize: 14, color: colors.inkSoft, marginTop: 4, lineHeight: 19 },
 });

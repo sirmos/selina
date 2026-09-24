@@ -69,10 +69,16 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
       ))}
 
       {!loading && !offering && (
-        <Text style={styles.emptyState}>
-          No offering configured yet. Add a product and offering in your RevenueCat dashboard,
-          this screen will pick it up automatically.
-        </Text>
+        <View style={styles.comingSoonCard}>
+          <View style={styles.comingSoonBadge}>
+            <Text style={styles.comingSoonBadgeText}>Coming soon</Text>
+          </View>
+          <Text style={styles.comingSoonTitle}>Selina Plus</Text>
+          <Text style={styles.comingSoonPrice}>Monthly and annual plans</Text>
+          <Text style={styles.comingSoonNote}>
+            Selina Plus is being finalized for launch. You'll be notified the moment it's available.
+          </Text>
+        </View>
       )}
 
       <Pressable
@@ -124,6 +130,48 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.inkSoft,
     marginTop: space.md,
+    lineHeight: 19,
+  },
+  comingSoonCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    marginTop: space.sm,
+    alignItems: "center",
+  },
+  comingSoonBadge: {
+    backgroundColor: colors.roseSoft,
+    paddingHorizontal: space.md,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    marginBottom: space.md,
+  },
+  comingSoonBadgeText: {
+    fontFamily: type.bodySemiBold,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    color: colors.rose,
+  },
+  comingSoonTitle: {
+    fontFamily: type.display,
+    fontSize: 20,
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  comingSoonPrice: {
+    fontFamily: type.bodySemiBold,
+    fontSize: 14,
+    color: colors.inkSoft,
+    marginBottom: space.sm,
+  },
+  comingSoonNote: {
+    fontFamily: type.body,
+    fontSize: 13,
+    color: colors.inkSoft,
+    textAlign: "center",
     lineHeight: 19,
   },
   restoreButton: { marginTop: space.md, alignSelf: "center" },
