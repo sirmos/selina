@@ -100,13 +100,12 @@ class HealthAgent(Agent):
         request = CompletionRequest(
             system_prompt=HEALTH_SYSTEM_PROMPT,
             user_prompt=(
-                "Using only these already-calculated dates, write a short, warm, clear summary "
-                "for the person. Do not recalculate or change any date, just present them clearly: "
-                "the fertile window (higher chance of pregnancy), the safe days on either side of "
-                f"it, and the next period. Dates: {computed}. "
-                "End with one gentle line noting this is an estimate based on averages, not a "
-                "guarantee, and that a doctor or a dedicated method is best for anything important "
-                "like contraception planning."
+                "Using only this already-calculated data, write exactly one warm, reassuring "
+                "sentence acknowledging her cycle has been calculated and estimates are ready below. "
+                f"Do not list or repeat any of the actual dates yourself, they're shown separately. Data: {computed}. "
+                "Follow it with one short second sentence noting this is an estimate based on averages, "
+                "not a guarantee, and a doctor or dedicated method is best for anything important like "
+                "contraception planning."
             ),
             tier="fast",
         )
