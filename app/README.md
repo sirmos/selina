@@ -1,62 +1,41 @@
-# Selina
+# Selina, mobile app
 
-Selina is a multi-agent app built to support women through safety, health, work, education, and everyday life. It's dedicated to two women I lost during pregnancy and childbirth.
+The Selina mobile app, built for the RevenueCat Shipaton 2026, Next Gen Award track. A Home screen showing what's happening across safety, health, academics, and a companion to talk to, a Rights & Support case timeline, and a Selina Plus subscription powered by RevenueCat.
 
-This repo holds two hackathon entries and the backend that powers both:
+## Setup
 
-selina/
-  app/        Mobile app (React Native, Expo) — RevenueCat Shipaton 2026 entry
-  vision/     OpenCV 5 safety pipeline — OpenCV AI Competition 2026 entry
-  backend/    Shared multi-agent orchestrator used by both entries above
-  docs/       Proposals and supporting notes
+1. Install dependencies
 
-## Running the backend
+npm install
 
-The backend is a Python Flask API. It runs on a mock reasoning provider by default, so no external API key is needed to run it locally.
 
-    cd backend
-    pip install -r requirements.txt
-    python api.py
+2. Create a RevenueCat account and project at revenuecat.com, add your app, and create products with entitlement id `selina_plus` (already wired into `src/services/revenuecat.ts`). For testing without a paid Apple or Google developer account, use a RevenueCat Test Store key.
 
-By default it runs on http://localhost:5000. This is the server the app talks to for chat, deadlines, case entries, and safety check-ins.
+3. Copy the env file and add your keys
 
-## Running the app
+cp .env.example .env
 
-The app is built with React Native and Expo.
 
-    cd app
-    npm install
+4. Point `EXPO_PUBLIC_API_URL` at a running backend (see `../backend/README.md`), or use the deployed one at `https://selina-cvoe.onrender.com`.
 
-Create a `.env` file in `app/` with:
+5. Start the app with Expo
 
-    EXPO_PUBLIC_API_URL=http://localhost:5000
-    EXPO_PUBLIC_RC_IOS_KEY=your_revenuecat_ios_key
-    EXPO_PUBLIC_RC_ANDROID_KEY=your_revenuecat_android_key
+npm start
 
-For testing purchases without a paid Apple or Google developer account, use a RevenueCat Test Store key for both values, available free from your own RevenueCat project.
 
-Then start the app:
+   Scan the QR code with Expo Go, or press `i` / `a` for a simulator.
 
-    npx expo start
+## What's built
 
-Scan the QR code with Expo Go, or run on a simulator/emulator.
+- Home dashboard summarizing safety, health, academics, and companion sections
+- Safety check-in with timed auto-alerts to emergency contacts
+- Health tab for cycle tracking and medication reminders
+- Academic tab with chat, deadlines, and (Selina Plus) scholarship search and a study planner
+- Rights & Support case timeline (Selina Plus)
+- Selina Plus subscription flow via RevenueCat, testable through Test Store with no cost
 
-If you'd rather point the app at the already-deployed backend instead of running one locally, use:
+## What's next
 
-    EXPO_PUBLIC_API_URL=https://selina-cvoe.onrender.com
-
-## app/ — RevenueCat Shipaton 2026 (Next Gen Award)
-
-A home dashboard, a Companion chat, a Safety check-in flow, a Rights & Support case timeline, and Academic tools including scholarship guidance and study planning. Selina Plus, a subscription tier powered by RevenueCat, unlocks the deeper features. See `app/README.md` for more detail.
-
-## vision/ — OpenCV AI Competition 2026 (powered by AWS)
-
-An OpenCV 5 pipeline that takes a submitted photo or video and turns it into structured, privacy-protected safety evidence, then decides what the Safety agent should do with it. See `vision/README.md` for setup and current status.
-
-## backend/ — shared reasoning layer
-
-The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on a mock reasoning provider so it works fully offline, with the interface built to plug in a real model later. See `backend/README.md`.
-
-## Status
-
-Actively building `app/` and `vision/`. `backend/` is functionally complete for what both entries need from it.
+- Connecting the reasoning layer to a real model instead of the mock provider
+- More Selina Plus features across Safety, Health, and Companion
+- Career and Financial sections, not yet built

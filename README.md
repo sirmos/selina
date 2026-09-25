@@ -1,53 +1,62 @@
 # Selina
 
-Selina is a multi-agent system built to support women through safety,
-health, work, education, and everyday life. It is dedicated to two women
-lost during pregnancy and childbirth.
+Selina is a multi-agent app built to support women through safety, health, work, education, and everyday life. It's dedicated to two women I lost during pregnancy and childbirth.
 
-This repository holds two hackathon entries, plus the shared backend that
-supports both.
+This repo holds two hackathon entries and the backend that powers both:
 
-## Structure
-
-```
 selina/
-  app/        Mobile app (React Native, Expo), RevenueCat Shipaton 2026 entry
-  vision/     OpenCV 5 safety evidence pipeline, OpenCV AI Competition 2026 entry
-  backend/    Multi-agent orchestrator and reasoning layer, supports both
-              entries above, not itself a hackathon submission
-  docs/       Proposals and supporting documents
-```
+  app/        Mobile app (React Native, Expo) — RevenueCat Shipaton 2026 entry
+  vision/     OpenCV 5 safety pipeline — OpenCV AI Competition 2026 entry
+  backend/    Shared multi-agent orchestrator used by both entries above
+  docs/       Proposals and supporting notes
 
-## The two entries
+## Running the backend
 
-**app/**, RevenueCat Shipaton 2026, Next Gen Award
-The Selina mobile app itself: a Home screen, a Companion flow, a Safety
-check in flow, a Rights and Support case timeline, and a Selina Plus
-subscription tier powered by the RevenueCat SDK. See `app/README.md` for
-setup.
+The backend is a Python Flask API. It runs on a mock reasoning provider by default, so no external API key is needed to run it locally.
 
-**vision/**, OpenCV AI Competition 2026, powered by AWS
-A real OpenCV 5 pipeline that turns a submitted photo or video into
-structured, privacy protected safety evidence, and decides what the
-Safety Agent should do next based on what it finds. See
-`vision/README.md` for setup and verified behavior.
+    cd backend
+    pip install -r requirements.txt
+    python api.py
 
-## backend/, shared reasoning layer
+By default it runs on http://localhost:5000. This is the server the app talks to for chat, deadlines, case entries, and safety check-ins.
 
-The Life Orchestrator and nine specialist agents (Safety, Health,
-Companion, Welfare, Rights and Support, Academic, Career, Financial,
-Opportunity), all built and tested against a mock reasoning provider, no
-external API key required. This is not itself entered in a hackathon, it
-is what powers the intelligence behind the app and vision entries. See
-`backend/README.md`.
+## Running the app
 
-The Nebius x NVIDIA Global AI Hackathon was dropped as a target after
-Nebius confirmed Nigeria cannot currently be supported for Token Factory
-billing, with no workaround available. The backend's provider interface
-still supports plugging in real Nemotron calls later if that changes, but
-it is no longer a build priority.
+The app is built with React Native and Expo.
+
+    cd app
+    npm install
+
+Create a `.env` file in `app/` with:
+
+    EXPO_PUBLIC_API_URL=http://localhost:5000
+    EXPO_PUBLIC_RC_IOS_KEY=your_revenuecat_ios_key
+    EXPO_PUBLIC_RC_ANDROID_KEY=your_revenuecat_android_key
+
+For testing purchases without a paid Apple or Google developer account, use a RevenueCat Test Store key for both values, available free from your own RevenueCat project.
+
+Then start the app:
+
+    npx expo start
+
+Scan the QR code with Expo Go, or run on a simulator/emulator.
+
+If you'd rather point the app at the already-deployed backend instead of running one locally, use:
+
+    EXPO_PUBLIC_API_URL=https://selina-cvoe.onrender.com
+
+## app/ — RevenueCat Shipaton 2026 (Next Gen Award)
+
+A home dashboard, a Companion chat, a Safety check-in flow, a Rights & Support case timeline, and Academic tools including scholarship guidance and study planning. Selina Plus, a subscription tier powered by RevenueCat, unlocks the deeper features. See `app/README.md` for more detail.
+
+## vision/ — OpenCV AI Competition 2026 (powered by AWS)
+
+An OpenCV 5 pipeline that takes a submitted photo or video and turns it into structured, privacy-protected safety evidence, then decides what the Safety agent should do with it. See `vision/README.md` for setup and current status.
+
+## backend/ — shared reasoning layer
+
+The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on a mock reasoning provider so it works fully offline, with the interface built to plug in a real model later. See `backend/README.md`.
 
 ## Status
 
-Actively building app/ and vision/. backend/ is functionally complete for
-supporting both, running on a mock reasoning provider.
+Actively building `app/` and `vision/`. `backend/` is functionally complete for what both entries need from it.
