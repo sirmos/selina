@@ -1,61 +1,62 @@
-# Selina, mobile app starter
+# Selina
 
-A starting point for the Selina mobile app, built for the RevenueCat Shipaton 2026,
-Next Gen Award track. This is a small, real slice of the larger Selina project: a
-Home screen showing what the agents are quietly handling, a Companion flow for
-talking things through, and a Selina Plus paywall powered by RevenueCat.
+Selina is a multi-agent app built to support women through safety, health, work, education, and everyday life. It's dedicated to two women I lost during pregnancy and childbirth.
 
-This is a starting scaffold, not a finished app. The Companion screen currently
-replies with a fixed placeholder message, that is intentional, it keeps the demo
-working without needing the Nemotron reasoning layer connected yet. Everything
-here is meant to be opened and continued in Claude Code or your own editor.
+This repo holds two hackathon entries and the backend that powers both:
 
-## Setup
+selina/
+  app/        Mobile app (React Native, Expo) — RevenueCat Shipaton 2026 entry
+  vision/     OpenCV 5 safety pipeline — OpenCV AI Competition 2026 entry
+  backend/    Shared multi-agent orchestrator used by both entries above
+  docs/       Proposals and supporting notes
 
-1. Install dependencies
+## Running the backend
 
-   ```
-   npm install
-   ```
+The backend is a Python Flask API. It runs on a mock reasoning provider by default, so no external API key is needed to run it locally.
 
-2. Create a RevenueCat account and project at revenuecat.com, add your app,
-   and create a subscription product with entitlement id `selina_plus`
-   (this id is already wired into `src/services/revenuecat.ts`).
+    cd backend
+    pip install -r requirements.txt
+    python api.py
 
-3. Copy the env file and add your RevenueCat keys
+By default it runs on http://localhost:5000. This is the server the app talks to for chat, deadlines, case entries, and safety check-ins.
 
-   ```
-   cp .env.example .env
-   ```
+## Running the app
 
-4. Start the app with Expo
+The app is built with React Native and Expo.
 
-   ```
-   npm start
-   ```
+    cd app
+    npm install
 
-   Scan the QR code with the Expo Go app on your phone, or press `i` / `a`
-   for a simulator if you have Xcode or Android Studio installed.
+Create a `.env` file in `app/` with:
 
-## What still needs building
+    EXPO_PUBLIC_API_URL=http://localhost:5000
+    EXPO_PUBLIC_RC_IOS_KEY=your_revenuecat_ios_key
+    EXPO_PUBLIC_RC_ANDROID_KEY=your_revenuecat_android_key
 
-- Fonts: the theme references Fraunces and Work Sans. Add
-  `@expo-google-fonts/fraunces` and `@expo-google-fonts/work-sans`, then load
-  them with `expo-font` before the app renders. Placeholder system fonts will
-  show until this is done.
-- Real content behind each Home screen card. Right now they are static examples.
-- Connecting Companion's reply to the actual Life Orchestrator once Nebius
-  access is unblocked.
-- An app icon at 1024x1024 and a screenshot at 1179x2556 with no device frame,
-  both required for the Devpost submission.
-- A demo video under 2 minutes for the Next Gen submission, showing the app
-  running and the purchase flow completing.
+For testing purchases without a paid Apple or Google developer account, use a RevenueCat Test Store key for both values, available free from your own RevenueCat project.
 
-## Next Gen Award submission checklist
+Then start the app:
 
-- [ ] Video, under 2 minutes, uploaded to YouTube or Vimeo, publicly visible
-- [ ] Open source code repository, publicly accessible
-- [ ] App description covering features and functionality
-- [ ] App icon, 1024x1024
-- [ ] Screenshot, 1179x2556, no device frame
-- [ ] A way for judges to test the premium features, a free trial or a promo code
+    npx expo start
+
+Scan the QR code with Expo Go, or run on a simulator/emulator.
+
+If you'd rather point the app at the already-deployed backend instead of running one locally, use:
+
+    EXPO_PUBLIC_API_URL=https://selina-cvoe.onrender.com
+
+## app/ — RevenueCat Shipaton 2026 (Next Gen Award)
+
+A home dashboard, a Companion chat, a Safety check-in flow, a Rights & Support case timeline, and Academic tools including scholarship guidance and study planning. Selina Plus, a subscription tier powered by RevenueCat, unlocks the deeper features. See `app/README.md` for more detail.
+
+## vision/ — OpenCV AI Competition 2026 (powered by AWS)
+
+An OpenCV 5 pipeline that takes a submitted photo or video and turns it into structured, privacy-protected safety evidence, then decides what the Safety agent should do with it. See `vision/README.md` for setup and current status.
+
+## backend/ — shared reasoning layer
+
+The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on a mock reasoning provider so it works fully offline, with the interface built to plug in a real model later. See `backend/README.md`.
+
+## Status
+
+Actively building `app/` and `vision/`. `backend/` is functionally complete for what both entries need from it.
