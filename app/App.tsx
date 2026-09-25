@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator } from "react-native";
+import { AppState, AppStateStatus, View, ActivityIndicator } from "react-native";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import {
   useFonts,
@@ -19,6 +19,7 @@ import HealthScreen from "./src/screens/HealthScreen";
 import RightsSupportScreen from "./src/screens/RightsSupportScreen";
 import AcademicScreen from "./src/screens/AcademicScreen";
 import EmergencyContactScreen from "./src/screens/EmergencyContactScreen";
+import LockScreen from "./src/screens/LockScreen";
 import { colors } from "./src/theme/tokens";
 import { configureRevenueCat } from "./src/services/revenuecat";
 import { SelinaProvider } from "./src/state/SelinaState";
@@ -28,6 +29,7 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [ready, setReady] = useState(false);
+  const [locked, setLocked] = useState(true);
   const [fontsLoaded] = useFonts({
     Lora_600SemiBold,
     Lora_500Medium_Italic,
@@ -41,12 +43,25 @@ export default function App() {
     setReady(true);
   }, []);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
+      if (nextState === "background" || nextState === "inactive") {
+        setLocked(true);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   if (!ready || !fontsLoaded) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.paper }}>
         <ActivityIndicator color={colors.teal} />
       </View>
     );
+  }
+
+  if (locked) {
+    return <LockScreen onUnlock={() => setLocked(false)} />;
   }
 
   return (
