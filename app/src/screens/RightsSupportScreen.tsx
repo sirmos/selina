@@ -5,8 +5,9 @@ import { colors, type, space, radius } from "../theme/tokens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelinaState } from "../state/SelinaState";
 import { submitCaseEntry } from "../services/api";
+import PlusGate from "../components/PlusGate";
 
-export default function RightsSupportScreen() {
+export default function RightsSupportScreen({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets();
   const { caseEntries, addCaseEntry } = useSelinaState();
   const [draft, setDraft] = useState("");
@@ -25,8 +26,6 @@ export default function RightsSupportScreen() {
         detail: message,
       });
     } catch (err) {
-      // Backend not reachable, still save the entry locally so nothing the
-      // person wrote is lost, just without the agent's acknowledgment.
       addCaseEntry({ title: "Note added (offline)", detail });
     } finally {
       setSaving(false);
@@ -46,49 +45,51 @@ export default function RightsSupportScreen() {
         it later.
       </Text>
 
-      <FlatList
-        data={caseEntries}
-        keyExtractor={(entry) => entry.id}
-        contentContainerStyle={{ paddingBottom: space.xl }}
-        renderItem={({ item }) => (
-          <View style={styles.entry}>
-            <Text style={styles.entryDate}>{item.date}</Text>
-            <Text style={styles.entryTitle}>{item.title}</Text>
-            <Text style={styles.entryDetail}>{item.detail}</Text>
-          </View>
-        )}
-      />
+      <PlusGate navigation={navigation}>
+        <FlatList
+          data={caseEntries}
+          keyExtractor={(entry) => entry.id}
+          contentContainerStyle={{ paddingBottom: space.xl }}
+          renderItem={({ item }) => (
+            <View style={styles.entry}>
+              <Text style={styles.entryDate}>{item.date}</Text>
+              <Text style={styles.entryTitle}>{item.title}</Text>
+              <Text style={styles.entryDetail}>{item.detail}</Text>
+            </View>
+          )}
+        />
 
-      {adding ? (
-        <View style={styles.addBox}>
-          <TextInput
-            style={styles.input}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="What happened?"
-            placeholderTextColor={colors.inkSoft}
-            multiline
-            autoFocus
-            editable={!saving}
-          />
-          <View style={styles.addRow}>
-            <Pressable style={styles.cancelButton} onPress={() => setAdding(false)} disabled={saving}>
-              <Text style={styles.cancelLabel}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.saveButton} onPress={submitEntry} disabled={saving}>
-              {saving ? (
-                <ActivityIndicator color={colors.paper} size="small" />
-              ) : (
-                <Text style={styles.saveLabel}>Save to case</Text>
-              )}
-            </Pressable>
+        {adding ? (
+          <View style={styles.addBox}>
+            <TextInput
+              style={styles.input}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="What happened?"
+              placeholderTextColor={colors.inkSoft}
+              multiline
+              autoFocus
+              editable={!saving}
+            />
+            <View style={styles.addRow}>
+              <Pressable style={styles.cancelButton} onPress={() => setAdding(false)} disabled={saving}>
+                <Text style={styles.cancelLabel}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.saveButton} onPress={submitEntry} disabled={saving}>
+                {saving ? (
+                  <ActivityIndicator color={colors.paper} size="small" />
+                ) : (
+                  <Text style={styles.saveLabel}>Save to case</Text>
+                )}
+              </Pressable>
+            </View>
           </View>
-        </View>
-      ) : (
-        <Pressable style={styles.addButton} onPress={() => setAdding(true)}>
-          <Text style={styles.addLabel}>Add to case</Text>
-        </Pressable>
-      )}
+        ) : (
+          <Pressable style={styles.addButton} onPress={() => setAdding(true)}>
+            <Text style={styles.addLabel}>Add to case</Text>
+          </Pressable>
+        )}
+      </PlusGate>
     </View>
   );
 }
@@ -165,6 +166,3 @@ const styles = StyleSheet.create({
   },
   saveLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.paper },
 });
-
-
-

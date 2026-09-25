@@ -40,3 +40,14 @@ export async function hasSelinaPlus(): Promise<boolean> {
 export async function restorePurchases(): Promise<CustomerInfo> {
   return Purchases.restorePurchases();
 }
+
+export function addEntitlementListener(
+  callback: (hasPlus: boolean) => void
+) {
+  const listener = (customerInfo: CustomerInfo) => {
+    callback(typeof customerInfo.entitlements.active[ENTITLEMENT_ID] !== "undefined");
+  };
+
+  Purchases.addCustomerInfoUpdateListener(listener);
+  return () => Purchases.removeCustomerInfoUpdateListener(listener);
+}
