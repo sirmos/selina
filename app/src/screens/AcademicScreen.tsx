@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useLayoutEffect } from "react";
 import {
   View,
   Text,
@@ -26,16 +26,35 @@ type Deadline = {
   message: string;
 };
 
-type ChatMessage = {
-  id: string;
-  from: "user" | "selina";
-  text: string;
-};
-
-export default function AcademicScreen() {
+export default function AcademicScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { academicMessages, addAcademicMessage, deadlines, addDeadline: addStoredDeadline } = useSelinaState();
+  const {
+    academicThreads,
+    activeAcademicThreadId,
+    addAcademicMessage,
+    createAcademicThread,
+    deadlines,
+    addDeadline: addStoredDeadline,
+  } = useSelinaState();
   const [tab, setTab] = useState<"chat" | "deadlines">("chat");
+
+  const activeThread = academicThreads.find((t) => t.id === activeAcademicThreadId);
+  const messages = activeThread?.messages || [];
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: "row" }}>
+          <Pressable onPress={createAcademicThread} style={{ marginRight: space.md }}>
+            <Feather name="plus" size={20} color={colors.ink} />
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate("ChatThreads", { agentType: "academic" })}>
+            <Feather name="clock" size={20} color={colors.ink} />
+          </Pressable>
+        </View>
+      ),
+    });
+  }, [navigation]);
 
   const [title, setTitle] = useState("");
   const [daysAway, setDaysAway] = useState("");
@@ -73,7 +92,7 @@ export default function AcademicScreen() {
     const text = draft.trim();
     if (!text || sending) return;
 
-    const history = academicMessages.map((m) => ({ role: m.from === "user" ? "user" : "assistant", text: m.text }));
+    const history = messages.map((m) => ({ role: m.from === "user" ? "user" : "assistant", text: m.text }));
     addAcademicMessage({ from: "user", text });
     setDraft("");
     setSending(true);
@@ -121,7 +140,7 @@ export default function AcademicScreen() {
       {tab === "chat" ? (
         <KeyboardAvoidingView style={styles.flexArea} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <FlatList
-            data={academicMessages}
+            data={messages}
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.chatListContent}
             style={styles.flexArea}

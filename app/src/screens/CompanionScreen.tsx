@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useLayoutEffect } from "react";
 import {
   View,
   Text,
@@ -18,11 +18,29 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sendCompanionMessage } from "../services/api";
 import { useSelinaState } from "../state/SelinaState";
 
-export default function CompanionScreen() {
+export default function CompanionScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { companionMessages, addCompanionMessage } = useSelinaState();
+  const { companionThreads, activeCompanionThreadId, addCompanionMessage, createCompanionThread } = useSelinaState();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+
+  const activeThread = companionThreads.find((t) => t.id === activeCompanionThreadId);
+  const messages = activeThread?.messages || [];
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: "row" }}>
+          <Pressable onPress={createCompanionThread} style={{ marginRight: space.md }}>
+            <Feather name="plus" size={20} color={colors.ink} />
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate("ChatThreads", { agentType: "companion" })}>
+            <Feather name="clock" size={20} color={colors.ink} />
+          </Pressable>
+        </View>
+      ),
+    });
+  }, [navigation]);
 
   async function copyMessage(text: string) {
     await Clipboard.setStringAsync(text);
@@ -31,9 +49,9 @@ export default function CompanionScreen() {
 
   async function send() {
     const text = draft.trim();
-    if (!text || sending) return;
+    if (!text || sending || !activeThread) return;
 
-    const history = companionMessages.map((m) => ({ role: m.from === "user" ? "user" : "assistant", text: m.text }));
+    const history = messages.map((m) => ({ role: m.from === "user" ? "user" : "assistant", text: m.text }));
 
     addCompanionMessage({ from: "user", text });
     setDraft("");
@@ -55,31 +73,19 @@ export default function CompanionScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <FlatList
-        data={companionMessages}
+        data={messages}
         keyExtractor={(m) => m.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <Pressable onLongPress={() => copyMessage(item.text)}>
-            <View
-              style={[
-                styles.bubble,
-                item.from === "user" ? styles.bubbleUser : styles.bubbleSelina,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.bubbleText,
-                  item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina,
-                ]}
-              >
+            <View style={[styles.bubble, item.from === "user" ? styles.bubbleUser : styles.bubbleSelina]}>
+              <Text style={[styles.bubbleText, item.from === "user" ? styles.bubbleTextUser : styles.bubbleTextSelina]}>
                 {item.text}
               </Text>
             </View>
           </Pressable>
         )}
-        ListFooterComponent={
-          sending ? <ActivityIndicator color={colors.teal} style={{ marginTop: space.sm }} /> : null
-        }
+        ListFooterComponent={sending ? <ActivityIndicator color={colors.teal} style={{ marginTop: space.sm }} /> : null}
       />
       <KeyboardStickyView>
         <View style={[styles.inputRow, { paddingBottom: insets.bottom + space.sm }]}>
@@ -104,54 +110,16 @@ export default function CompanionScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
   list: { padding: space.lg, paddingBottom: space.md },
-  bubble: {
-    maxWidth: "82%",
-    borderRadius: radius.lg,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-    marginBottom: space.sm,
-  },
-  bubbleSelina: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignSelf: "flex-start",
-  },
-  bubbleUser: {
-    backgroundColor: colors.amber,
-    alignSelf: "flex-end",
-  },
+  bubble: { maxWidth: "82%", borderRadius: radius.lg, paddingVertical: space.sm, paddingHorizontal: space.md, marginBottom: space.sm },
+  bubbleSelina: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.cardBorder, alignSelf: "flex-start" },
+  bubbleUser: { backgroundColor: colors.amber, alignSelf: "flex-end" },
   bubbleText: { fontFamily: type.body, fontSize: 15, lineHeight: 21 },
   bubbleTextSelina: { color: colors.ink },
   bubbleTextUser: { color: colors.paper },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    padding: space.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    backgroundColor: colors.paper,
-  },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", padding: space.md, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.paper },
   input: {
-    flex: 1,
-    fontFamily: type.body,
-    fontSize: 15,
-    color: colors.ink,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    maxHeight: 120,
+    flex: 1, fontFamily: type.body, fontSize: 15, color: colors.ink, backgroundColor: colors.card,
+    borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.sm, maxHeight: 120,
   },
-  sendButton: {
-    marginLeft: space.sm,
-    backgroundColor: colors.amber,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm + 4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  sendButton: { marginLeft: space.sm, backgroundColor: colors.amber, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.sm + 4, alignItems: "center", justifyContent: "center" },
 });

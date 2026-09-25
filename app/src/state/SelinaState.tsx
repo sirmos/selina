@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type CheckInStatus = "none" | "scheduled" | "safe" | "missed";
 
@@ -21,6 +22,13 @@ export type ChatMessage = {
   text: string;
 };
 
+export type ChatThread = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  updatedAt: number;
+};
+
 export type Deadline = {
   id: string;
   title: string;
@@ -40,6 +48,23 @@ export type Medication = {
   message: string;
 };
 
+const COMPANION_OPENING_TEXT = "I'm here. Take your time, there's no rush to explain everything at once.";
+const ACADEMIC_OPENING_TEXT = "Ask me to explain something, quiz you, or help you work through a problem.";
+
+function makeNewThread(openingText: string): ChatThread {
+  return {
+    id: `${Date.now()}`,
+    title: "New chat",
+    messages: [{ id: `${Date.now()}-0`, from: "selina", text: openingText }],
+    updatedAt: Date.now(),
+  };
+}
+
+function titleFromFirstMessage(text: string): string {
+  const trimmed = text.trim();
+  return trimmed.length > 32 ? trimmed.slice(0, 32) + "…" : trimmed;
+}
+
 type SelinaState = {
   checkInStatus: CheckInStatus;
   setCheckInStatus: (status: CheckInStatus) => void;
@@ -51,34 +76,32 @@ type SelinaState = {
   activeCheckInId: string | null;
   setActiveCheckInId: (id: string | null) => void;
 
-  companionMessages: ChatMessage[];
+  companionThreads: ChatThread[];
+  activeCompanionThreadId: string;
+  setActiveCompanionThreadId: (id: string) => void;
+  createCompanionThread: () => void;
+  renameCompanionThread: (id: string, title: string) => void;
+  deleteCompanionThread: (id: string) => void;
   addCompanionMessage: (message: Omit<ChatMessage, "id">) => void;
 
-  academicMessages: ChatMessage[];
+  academicThreads: ChatThread[];
+  activeAcademicThreadId: string;
+  setActiveAcademicThreadId: (id: string) => void;
+  createAcademicThread: () => void;
+  renameAcademicThread: (id: string, title: string) => void;
+  deleteAcademicThread: (id: string) => void;
   addAcademicMessage: (message: Omit<ChatMessage, "id">) => void;
+
+  deadlines: Deadline[];
+  addDeadline: (deadline: Omit<Deadline, "id">) => void;
 
   cycleResult: CycleResult | null;
   setCycleResult: (result: CycleResult | null) => void;
   medications: Medication[];
   addMedication: (medication: Omit<Medication, "id">) => void;
-
-  deadlines: Deadline[];
-  addDeadline: (deadline: Omit<Deadline, "id">) => void;
 };
 
 const SelinaContext = createContext<SelinaState | undefined>(undefined);
-
-const companionOpening: ChatMessage = {
-  id: "companion-0",
-  from: "selina",
-  text: "I'm here. Take your time, there's no rush to explain everything at once.",
-};
-
-const academicOpening: ChatMessage = {
-  id: "academic-0",
-  from: "selina",
-  text: "Ask me to explain something, quiz you, or help you work through a problem.",
-};
 
 export function SelinaProvider({ children }: { children: ReactNode }) {
   const [checkInStatus, setCheckInStatus] = useState<CheckInStatus>("none");
@@ -93,17 +116,78 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
     },
   ]);
 
-  const [companionMessages, setCompanionMessages] = useState<ChatMessage[]>([companionOpening]);
-  const [academicMessages, setAcademicMessages] = useState<ChatMessage[]>([academicOpening]);
+  const [companionThreads, setCompanionThreads] = useState<ChatThread[]>([]);
+  const [activeCompanionThreadId, setActiveCompanionThreadId] = useState<string>("");
+  const [academicThreads, setAcademicThreads] = useState<ChatThread[]>([]);
+  const [activeAcademicThreadId, setActiveAcademicThreadId] = useState<string>("");
+  const [loaded, setLoaded] = useState(false);
+
+  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
   const [cycleResult, setCycleResult] = useState<CycleResult | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
-  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+
+  // Load persisted threads once on startup
+  useEffect(() => {
+    (async () => {
+      try {
+        const [storedCompanion, storedCompanionActive, storedAcademic, storedAcademicActive] = await Promise.all([
+          AsyncStorage.getItem("selina_companion_threads"),
+          AsyncStorage.getItem("selina_companion_active"),
+          AsyncStorage.getItem("selina_academic_threads"),
+          AsyncStorage.getItem("selina_academic_active"),
+        ]);
+
+        const companionParsed: ChatThread[] = storedCompanion ? JSON.parse(storedCompanion) : [];
+        const academicParsed: ChatThread[] = storedAcademic ? JSON.parse(storedAcademic) : [];
+
+        const initialCompanion = companionParsed.length > 0 ? companionParsed : [makeNewThread(COMPANION_OPENING_TEXT)];
+        const initialAcademic = academicParsed.length > 0 ? academicParsed : [makeNewThread(ACADEMIC_OPENING_TEXT)];
+
+        setCompanionThreads(initialCompanion);
+        setActiveCompanionThreadId(
+          storedCompanionActive && initialCompanion.some((t) => t.id === storedCompanionActive)
+            ? storedCompanionActive
+            : initialCompanion[0].id
+        );
+
+        setAcademicThreads(initialAcademic);
+        setActiveAcademicThreadId(
+          storedAcademicActive && initialAcademic.some((t) => t.id === storedAcademicActive)
+            ? storedAcademicActive
+            : initialAcademic[0].id
+        );
+      } catch (err) {
+        setCompanionThreads([makeNewThread(COMPANION_OPENING_TEXT)]);
+        setAcademicThreads([makeNewThread(ACADEMIC_OPENING_TEXT)]);
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+
+  // Persist on every change, once initial load has finished
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_companion_threads", JSON.stringify(companionThreads)).catch(() => null);
+  }, [companionThreads, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_companion_active", activeCompanionThreadId).catch(() => null);
+  }, [activeCompanionThreadId, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_academic_threads", JSON.stringify(academicThreads)).catch(() => null);
+  }, [academicThreads, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_academic_active", activeAcademicThreadId).catch(() => null);
+  }, [activeAcademicThreadId, loaded]);
 
   function addCaseEntry(entry: Omit<CaseEntry, "id" | "date">) {
-    setCaseEntries((prev) => [
-      { ...entry, id: `c${prev.length}`, date: "Just now" },
-      ...prev,
-    ]);
+    setCaseEntries((prev) => [{ ...entry, id: `c${prev.length}`, date: "Just now" }, ...prev]);
   }
 
   function addEmergencyContact(contact: Omit<EmergencyContact, "id">) {
@@ -114,12 +198,86 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
     setEmergencyContacts((prev) => prev.filter((c) => c.id !== id));
   }
 
+  function createCompanionThread() {
+    const thread = makeNewThread(COMPANION_OPENING_TEXT);
+    setCompanionThreads((prev) => [thread, ...prev]);
+    setActiveCompanionThreadId(thread.id);
+  }
+
+  function renameCompanionThread(id: string, title: string) {
+    setCompanionThreads((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)));
+  }
+
+  function deleteCompanionThread(id: string) {
+    setCompanionThreads((prev) => {
+      const remaining = prev.filter((t) => t.id !== id);
+      if (remaining.length === 0) {
+        const fresh = makeNewThread(COMPANION_OPENING_TEXT);
+        setActiveCompanionThreadId(fresh.id);
+        return [fresh];
+      }
+      if (id === activeCompanionThreadId) {
+        setActiveCompanionThreadId(remaining[0].id);
+      }
+      return remaining;
+    });
+  }
+
   function addCompanionMessage(message: Omit<ChatMessage, "id">) {
-    setCompanionMessages((prev) => [...prev, { ...message, id: `${Date.now()}-${prev.length}` }]);
+    setCompanionThreads((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeCompanionThreadId) return t;
+        const newMessages = [...t.messages, { ...message, id: `${Date.now()}-${t.messages.length}` }];
+        const shouldRetitle = t.title === "New chat" && message.from === "user";
+        return {
+          ...t,
+          messages: newMessages,
+          title: shouldRetitle ? titleFromFirstMessage(message.text) : t.title,
+          updatedAt: Date.now(),
+        };
+      })
+    );
+  }
+
+  function createAcademicThread() {
+    const thread = makeNewThread(ACADEMIC_OPENING_TEXT);
+    setAcademicThreads((prev) => [thread, ...prev]);
+    setActiveAcademicThreadId(thread.id);
+  }
+
+  function renameAcademicThread(id: string, title: string) {
+    setAcademicThreads((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)));
+  }
+
+  function deleteAcademicThread(id: string) {
+    setAcademicThreads((prev) => {
+      const remaining = prev.filter((t) => t.id !== id);
+      if (remaining.length === 0) {
+        const fresh = makeNewThread(ACADEMIC_OPENING_TEXT);
+        setActiveAcademicThreadId(fresh.id);
+        return [fresh];
+      }
+      if (id === activeAcademicThreadId) {
+        setActiveAcademicThreadId(remaining[0].id);
+      }
+      return remaining;
+    });
   }
 
   function addAcademicMessage(message: Omit<ChatMessage, "id">) {
-    setAcademicMessages((prev) => [...prev, { ...message, id: `${Date.now()}-${prev.length}` }]);
+    setAcademicThreads((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeAcademicThreadId) return t;
+        const newMessages = [...t.messages, { ...message, id: `${Date.now()}-${t.messages.length}` }];
+        const shouldRetitle = t.title === "New chat" && message.from === "user";
+        return {
+          ...t,
+          messages: newMessages,
+          title: shouldRetitle ? titleFromFirstMessage(message.text) : t.title,
+          updatedAt: Date.now(),
+        };
+      })
+    );
   }
 
   function addDeadline(deadline: Omit<Deadline, "id">) {
@@ -142,16 +300,26 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
         removeEmergencyContact,
         activeCheckInId,
         setActiveCheckInId,
-        companionMessages,
+        companionThreads,
+        activeCompanionThreadId,
+        setActiveCompanionThreadId,
+        createCompanionThread,
+        renameCompanionThread,
+        deleteCompanionThread,
         addCompanionMessage,
-        academicMessages,
+        academicThreads,
+        activeAcademicThreadId,
+        setActiveAcademicThreadId,
+        createAcademicThread,
+        renameAcademicThread,
+        deleteAcademicThread,
         addAcademicMessage,
+        deadlines,
+        addDeadline,
         cycleResult,
         setCycleResult,
         medications,
         addMedication,
-        deadlines,
-        addDeadline,
       }}
     >
       {children}

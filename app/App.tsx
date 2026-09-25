@@ -18,6 +18,7 @@ import SafetyCheckInScreen from "./src/screens/SafetyCheckInScreen";
 import HealthScreen from "./src/screens/HealthScreen";
 import RightsSupportScreen from "./src/screens/RightsSupportScreen";
 import AcademicScreen from "./src/screens/AcademicScreen";
+import ChatThreadListScreen from "./src/screens/ChatThreadListScreen";
 import EmergencyContactScreen from "./src/screens/EmergencyContactScreen";
 import LockScreen from "./src/screens/LockScreen";
 import { colors } from "./src/theme/tokens";
@@ -96,6 +97,11 @@ export default function App() {
                 name="Academic"
                 component={AcademicScreen}
                 options={{ headerShown: true, title: "Academic" }}
+              />
+              <Stack.Screen
+                name="ChatThreads"
+                component={ChatThreadListScreen}
+                options={{ headerShown: true, title: "Previous chats", presentation: "modal" }}
               />
               <Stack.Screen
                 name="EmergencyContact"
