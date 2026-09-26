@@ -36,6 +36,5 @@ npm start
 
 ## What's next
 
-- Connecting the reasoning layer to a real model instead of the mock provider
 - More Selina Plus features across Safety, Health, and Companion
 - Career and Financial sections, not yet built

@@ -55,7 +55,7 @@ An OpenCV 5 pipeline that takes a submitted photo or video and turns it into str
 
 ## backend/ — shared reasoning layer
 
-The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on a mock reasoning provider so it works fully offline, with the interface built to plug in a real model later. See `backend/README.md`.
+The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on real reasoning through Groq by default, with a built-in mock provider as an offline fallback if that connection is ever unavailable. See `backend/README.md`.
 
 ## Status
 
