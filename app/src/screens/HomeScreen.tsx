@@ -54,6 +54,20 @@ function AgentCard({ tag, title, detail, icon, accent, accentSoft, onPress }: Ca
   );
 }
 
+type ComingSoonProps = {
+  tag: string;
+  icon: React.ComponentProps<typeof Feather>["name"];
+};
+
+function ComingSoonCard({ tag, icon }: ComingSoonProps) {
+  return (
+    <View style={styles.comingSoonCard}>
+      <Feather name={icon} size={18} color={colors.inkSoft} />
+      <Text style={styles.comingSoonLabel}>{tag}</Text>
+    </View>
+  );
+}
+
 export default function HomeScreen({ navigation }: Props) {
   const { checkInStatus } = useSelinaState();
   const safetyCopy = safetyCardCopy(checkInStatus);
@@ -98,6 +112,16 @@ export default function HomeScreen({ navigation }: Props) {
       />
 
       <AgentCard
+        tag="Rights & Support"
+        title="Your case"
+        detail="A private, dated record of what's been agreed and what's happened."
+        icon="file-text"
+        accent={colors.rose}
+        accentSoft={colors.roseSoft}
+        onPress={() => navigation.navigate("RightsSupport")}
+      />
+
+      <AgentCard
         tag="Companion"
         title="Just here to talk"
         detail="A private space, whenever you need it."
@@ -119,6 +143,14 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
         <Feather name="chevron-right" size={18} color={colors.paper} style={styles.chevron} />
       </Pressable>
+
+      <Text style={styles.comingSoonHeading}>More coming to Selina Plus</Text>
+      <View style={styles.comingSoonRow}>
+        <ComingSoonCard tag="Welfare" icon="umbrella" />
+        <ComingSoonCard tag="Career" icon="briefcase" />
+        <ComingSoonCard tag="Financial" icon="dollar-sign" />
+        <ComingSoonCard tag="Opportunity" icon="compass" />
+      </View>
     </ScrollView>
   );
 }
@@ -208,5 +240,34 @@ const styles = StyleSheet.create({
     color: colors.paper,
     opacity: 0.85,
     lineHeight: 20,
+  },
+  comingSoonHeading: {
+    fontFamily: type.bodySemiBold,
+    fontSize: 13,
+    color: colors.inkSoft,
+    marginTop: space.lg,
+    marginBottom: space.sm,
+  },
+  comingSoonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: space.sm,
+  },
+  comingSoonCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    opacity: 0.6,
+  },
+  comingSoonLabel: {
+    fontFamily: type.bodySemiBold,
+    fontSize: 12.5,
+    color: colors.inkSoft,
+    marginLeft: 6,
   },
 });

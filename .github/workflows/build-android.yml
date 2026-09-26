@@ -31,15 +31,26 @@ jobs:
           EXPO_PUBLIC_RC_IOS_KEY: ${{ secrets.EXPO_PUBLIC_RC_IOS_KEY }}
           EXPO_PUBLIC_RC_ANDROID_KEY: ${{ secrets.EXPO_PUBLIC_RC_ANDROID_KEY }}
 
-      - name: Patch gradle so debug build bundles JS (no Metro needed)
+      - name: Enable JS bundling for debug build
         working-directory: app
         run: |
-          awk '1;/^react \{/{print "    debuggableVariants = []"}' android/app/build.gradle > android/app/build.gradle.tmp
-          mv android/app/build.gradle.tmp android/app/build.gradle
+          node -e "
+            const fs = require('fs');
+            const path = 'android/app/build.gradle';
+            let content = fs.readFileSync(path, 'utf8');
+            if (!content.includes('bundleInDebug')) {
+              content = content.replace(/react\s*\{/, 'react {\n    bundleInDebug = true');
+            }
+            fs.writeFileSync(path, content);
+          "
 
       - name: Build debug APK (standalone)
         working-directory: app/android
         run: ./gradlew assembleDebug
+        env:
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_RC_IOS_KEY: ${{ secrets.EXPO_PUBLIC_RC_IOS_KEY }}
+          EXPO_PUBLIC_RC_ANDROID_KEY: ${{ secrets.EXPO_PUBLIC_RC_ANDROID_KEY }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

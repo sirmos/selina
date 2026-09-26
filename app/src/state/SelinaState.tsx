@@ -51,6 +51,15 @@ export type Medication = {
 const COMPANION_OPENING_TEXT = "I'm here. Take your time, there's no rush to explain everything at once.";
 const ACADEMIC_OPENING_TEXT = "Ask me to explain something, quiz you, or help you work through a problem.";
 
+const DEFAULT_CASE_ENTRIES: CaseEntry[] = [
+  {
+    id: "c0",
+    title: "Case opened",
+    detail: "Started tracking hours and pay against what was agreed.",
+    date: "3 days ago",
+  },
+];
+
 function makeNewThread(openingText: string): ChatThread {
   return {
     id: `${Date.now()}`,
@@ -63,6 +72,15 @@ function makeNewThread(openingText: string): ChatThread {
 function titleFromFirstMessage(text: string): string {
   const trimmed = text.trim();
   return trimmed.length > 32 ? trimmed.slice(0, 32) + "…" : trimmed;
+}
+
+async function loadJSON<T>(key: string, fallback: T): Promise<T> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch (err) {
+    return fallback;
+  }
 }
 
 type SelinaState = {
@@ -107,14 +125,7 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
   const [checkInStatus, setCheckInStatus] = useState<CheckInStatus>("none");
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [activeCheckInId, setActiveCheckInId] = useState<string | null>(null);
-  const [caseEntries, setCaseEntries] = useState<CaseEntry[]>([
-    {
-      id: "c0",
-      title: "Case opened",
-      detail: "Started tracking hours and pay against what was agreed.",
-      date: "3 days ago",
-    },
-  ]);
+  const [caseEntries, setCaseEntries] = useState<CaseEntry[]>(DEFAULT_CASE_ENTRIES);
 
   const [companionThreads, setCompanionThreads] = useState<ChatThread[]>([]);
   const [activeCompanionThreadId, setActiveCompanionThreadId] = useState<string>("");
@@ -126,15 +137,34 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
   const [cycleResult, setCycleResult] = useState<CycleResult | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
 
-  // Load persisted threads once on startup
+  // Load everything persisted once on startup
   useEffect(() => {
     (async () => {
       try {
-        const [storedCompanion, storedCompanionActive, storedAcademic, storedAcademicActive] = await Promise.all([
+        const [
+          storedCompanion,
+          storedCompanionActive,
+          storedAcademic,
+          storedAcademicActive,
+          storedContacts,
+          storedCheckInStatus,
+          storedActiveCheckInId,
+          storedCaseEntries,
+          storedCycleResult,
+          storedMedications,
+          storedDeadlines,
+        ] = await Promise.all([
           AsyncStorage.getItem("selina_companion_threads"),
           AsyncStorage.getItem("selina_companion_active"),
           AsyncStorage.getItem("selina_academic_threads"),
           AsyncStorage.getItem("selina_academic_active"),
+          AsyncStorage.getItem("selina_emergency_contacts"),
+          AsyncStorage.getItem("selina_checkin_status"),
+          AsyncStorage.getItem("selina_active_checkin_id"),
+          AsyncStorage.getItem("selina_case_entries"),
+          AsyncStorage.getItem("selina_cycle_result"),
+          AsyncStorage.getItem("selina_medications"),
+          AsyncStorage.getItem("selina_deadlines"),
         ]);
 
         const companionParsed: ChatThread[] = storedCompanion ? JSON.parse(storedCompanion) : [];
@@ -156,6 +186,14 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
             ? storedAcademicActive
             : initialAcademic[0].id
         );
+
+        if (storedContacts) setEmergencyContacts(JSON.parse(storedContacts));
+        if (storedCheckInStatus) setCheckInStatus(storedCheckInStatus as CheckInStatus);
+        if (storedActiveCheckInId) setActiveCheckInId(storedActiveCheckInId);
+        if (storedCaseEntries) setCaseEntries(JSON.parse(storedCaseEntries));
+        if (storedCycleResult) setCycleResult(JSON.parse(storedCycleResult));
+        if (storedMedications) setMedications(JSON.parse(storedMedications));
+        if (storedDeadlines) setDeadlines(JSON.parse(storedDeadlines));
       } catch (err) {
         setCompanionThreads([makeNewThread(COMPANION_OPENING_TEXT)]);
         setAcademicThreads([makeNewThread(ACADEMIC_OPENING_TEXT)]);
@@ -186,8 +224,51 @@ export function SelinaProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem("selina_academic_active", activeAcademicThreadId).catch(() => null);
   }, [activeAcademicThreadId, loaded]);
 
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_emergency_contacts", JSON.stringify(emergencyContacts)).catch(() => null);
+  }, [emergencyContacts, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_checkin_status", checkInStatus).catch(() => null);
+  }, [checkInStatus, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (activeCheckInId === null) {
+      AsyncStorage.removeItem("selina_active_checkin_id").catch(() => null);
+    } else {
+      AsyncStorage.setItem("selina_active_checkin_id", activeCheckInId).catch(() => null);
+    }
+  }, [activeCheckInId, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_case_entries", JSON.stringify(caseEntries)).catch(() => null);
+  }, [caseEntries, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (cycleResult === null) {
+      AsyncStorage.removeItem("selina_cycle_result").catch(() => null);
+    } else {
+      AsyncStorage.setItem("selina_cycle_result", JSON.stringify(cycleResult)).catch(() => null);
+    }
+  }, [cycleResult, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_medications", JSON.stringify(medications)).catch(() => null);
+  }, [medications, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    AsyncStorage.setItem("selina_deadlines", JSON.stringify(deadlines)).catch(() => null);
+  }, [deadlines, loaded]);
+
   function addCaseEntry(entry: Omit<CaseEntry, "id" | "date">) {
-    setCaseEntries((prev) => [{ ...entry, id: `c${prev.length}`, date: "Just now" }, ...prev]);
+    setCaseEntries((prev) => [{ ...entry, id: `c${Date.now()}`, date: "Just now" }, ...prev]);
   }
 
   function addEmergencyContact(contact: Omit<EmergencyContact, "id">) {

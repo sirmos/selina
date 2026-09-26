@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Linking,
 } from "react-native";
 import { KeyboardAvoidingView, KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { Feather } from "@expo/vector-icons";
@@ -28,6 +29,7 @@ type Scholarship = {
   level: string;
   deadline: string;
   blurb: string;
+  link: string;
 };
 
 const SCHOLARSHIPS: Scholarship[] = [
@@ -38,6 +40,7 @@ const SCHOLARSHIPS: Scholarship[] = [
     level: "Undergraduate & Graduate",
     deadline: "Varies by partner university",
     blurb: "Full funding for African students, covering tuition, accommodation and mentorship.",
+    link: "https://mastercardfdn.org/en/programs/mastercard-foundation-scholars-program/",
   },
   {
     id: "chevening",
@@ -46,6 +49,7 @@ const SCHOLARSHIPS: Scholarship[] = [
     level: "Master's",
     deadline: "Typically closes early November",
     blurb: "UK government-funded, fully-funded one-year master's for future leaders.",
+    link: "https://www.chevening.org/",
   },
   {
     id: "daad",
@@ -54,6 +58,7 @@ const SCHOLARSHIPS: Scholarship[] = [
     level: "Undergraduate, Master's, PhD",
     deadline: "Varies by programme",
     blurb: "German academic exchange funding covering tuition, stipend and travel.",
+    link: "https://www.daad.de/en/",
   },
   {
     id: "fulbright",
@@ -62,6 +67,7 @@ const SCHOLARSHIPS: Scholarship[] = [
     level: "Master's & PhD",
     deadline: "Typically closes in early spring, check local commission",
     blurb: "US government-funded study and research grants for graduate study.",
+    link: "https://foreign.fulbrightonline.org/",
   },
   {
     id: "ngx-ceo-scholarship",
@@ -70,6 +76,7 @@ const SCHOLARSHIPS: Scholarship[] = [
     level: "Undergraduate",
     deadline: "Check current cycle dates",
     blurb: "Merit-based scholarship supporting Nigerian undergraduates in local universities.",
+    link: "https://www.google.com/search?q=NGX+CEO+Roundtable+National+Scholarship",
   },
   {
     id: "petrobal-nnpc",
@@ -78,6 +85,7 @@ const SCHOLARSHIPS: Scholarship[] = [
     level: "Undergraduate",
     deadline: "Usually opens after WAEC/JAMB results",
     blurb: "Annual Nigerian national scholarship for undergraduates in approved institutions.",
+    link: "https://www.google.com/search?q=NNPC+Total+National+Merit+Scholarship",
   },
 ];
 
@@ -120,6 +128,7 @@ export default function AcademicScreen({ navigation }: any) {
   // Scholarships tab state
   const [scholarshipGuidance, setScholarshipGuidance] = useState<Record<string, string>>({});
   const [loadingGuidance, setLoadingGuidance] = useState<string | null>(null);
+  const [scholarshipSearch, setScholarshipSearch] = useState("");
 
   // Planner tab state
   const [examName, setExamName] = useState("");
@@ -369,30 +378,55 @@ export default function AcademicScreen({ navigation }: any) {
             keyboardShouldPersistTaps="handled"
           >
             <Text style={styles.sectionIntro}>
-              National and international scholarships worth exploring. Tap one for tailored
-              application guidance.
+              National and international scholarships worth exploring. Search by name, region, or
+              level, then tap a card for guidance or the official page.
             </Text>
-            {SCHOLARSHIPS.map((s) => (
+
+            <TextInput
+              style={styles.input}
+              value={scholarshipSearch}
+              onChangeText={setScholarshipSearch}
+              placeholder="Search scholarships"
+              placeholderTextColor={colors.inkSoft}
+            />
+
+            {SCHOLARSHIPS.filter((s) => {
+              const q = scholarshipSearch.trim().toLowerCase();
+              if (!q) return true;
+              return (
+                s.title.toLowerCase().includes(q) ||
+                s.region.toLowerCase().includes(q) ||
+                s.level.toLowerCase().includes(q)
+              );
+            }).map((s) => (
               <View key={s.id} style={styles.scholarshipCard}>
                 <Text style={styles.deadlineTitle}>{s.title}</Text>
                 <Text style={styles.scholarshipMeta}>{s.region} • {s.level}</Text>
                 <Text style={styles.scholarshipMeta}>Deadline: {s.deadline}</Text>
                 <Text style={styles.deadlineMessage}>{s.blurb}</Text>
 
-                {scholarshipGuidance[s.id] ? (
-                  <Text style={styles.guidanceText}>{scholarshipGuidance[s.id]}</Text>
-                ) : (
+                <View style={styles.scholarshipButtonRow}>
                   <Pressable
-                    style={styles.guidanceButton}
+                    style={[styles.guidanceButton, styles.scholarshipButtonHalf]}
                     onPress={() => getScholarshipGuidance(s)}
                     disabled={loadingGuidance === s.id}
                   >
                     {loadingGuidance === s.id ? (
                       <ActivityIndicator color={colors.paper} size="small" />
                     ) : (
-                      <Text style={styles.saveLabel}>Get application guidance</Text>
+                      <Text style={styles.saveLabel}>Get guidance</Text>
                     )}
                   </Pressable>
+                  <Pressable
+                    style={[styles.visitButton, styles.scholarshipButtonHalf]}
+                    onPress={() => Linking.openURL(s.link)}
+                  >
+                    <Text style={styles.visitLabel}>Visit official page</Text>
+                  </Pressable>
+                </View>
+
+                {scholarshipGuidance[s.id] && (
+                  <Text style={styles.guidanceText}>{scholarshipGuidance[s.id]}</Text>
                 )}
               </View>
             ))}
@@ -641,6 +675,15 @@ const styles = StyleSheet.create({
     color: colors.teal,
     marginTop: 2,
   },
+  scholarshipButtonRow: { flexDirection: "row", gap: space.sm, marginTop: space.sm },
+  scholarshipButtonHalf: { flex: 1, marginTop: 0 },
+  visitButton: {
+    backgroundColor: colors.teal,
+    borderRadius: radius.md,
+    paddingVertical: space.sm,
+    alignItems: "center",
+  },
+  visitLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.paper },
   guidanceButton: {
     backgroundColor: colors.rose,
     borderRadius: radius.md,

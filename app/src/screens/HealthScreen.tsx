@@ -2,8 +2,49 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, type, space, radius } from "../theme/tokens";
-import { calculateCycle, addMedication as addMedicationApi } from "../services/api";
+import { calculateCycle, addMedication as addMedicationApi, sendAcademicMessage } from "../services/api";
 import { useSelinaState } from "../state/SelinaState";
+import PlusGate from "../components/PlusGate";
+
+function formatShort(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString(undefined, { month: "long", day: "numeric" });
+}
+
+function formatLong(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+}
+
+function buildCycleNarrative(computed: any): string {
+  const parts: string[] = [];
+
+  parts.push(
+    `Your fertile window, when the chance of pregnancy is highest, is from ${formatShort(
+      computed.fertile_window.start
+    )} to ${formatLong(computed.fertile_window.end)}.`
+  );
+
+  if (computed.safe_days_before_ovulation && computed.safe_days_after_ovulation) {
+    parts.push(
+      `The days considered safe before ovulation are ${formatShort(
+        computed.safe_days_before_ovulation.start
+      )} to ${formatShort(computed.safe_days_before_ovulation.end)}, and the safe days after ovulation run from ${formatShort(
+        computed.safe_days_after_ovulation.start
+      )} to ${formatLong(computed.safe_days_after_ovulation.end)}.`
+    );
+  }
+
+  parts.push(
+    `Your next period is expected to start on ${formatLong(computed.next_period.start)} and end on ${formatLong(
+      computed.next_period.end
+    )}.`
+  );
+
+  parts.push(
+    "This is an estimate based on averages, not a guarantee, and a doctor or a dedicated method is best for anything important like contraception planning."
+  );
+
+  return parts.join(" ");
+}
 
 function CycleCalendar({ computed }: { computed: any }) {
   const periodStart = new Date(computed.period_start);
@@ -81,9 +122,9 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   );
 }
 
-export default function HealthScreen() {
+export default function HealthScreen({ navigation }: { navigation: any }) {
   const { cycleResult, setCycleResult, medications, addMedication } = useSelinaState();
-  const [tab, setTab] = useState<"cycle" | "medication">("cycle");
+  const [tab, setTab] = useState<"cycle" | "medication" | "general">("cycle");
 
   const [lastPeriod, setLastPeriod] = useState("");
   const [cycleLength, setCycleLength] = useState("28");
@@ -97,6 +138,14 @@ export default function HealthScreen() {
   const [timesOfDay, setTimesOfDay] = useState("08:00, 20:00");
   const [durationDays, setDurationDays] = useState("3");
   const [savingMed, setSavingMed] = useState(false);
+
+  // General health (Plus) state
+  const [age, setAge] = useState("");
+  const [symptoms, setSymptoms] = useState("");
+  const [duration, setDuration] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
+  const [checkingSymptoms, setCheckingSymptoms] = useState(false);
+  const [symptomGuidance, setSymptomGuidance] = useState<string | null>(null);
 
   async function handleCalculate() {
     if (!lastPeriod.trim()) return;
@@ -143,6 +192,25 @@ export default function HealthScreen() {
     }
   }
 
+  async function checkSymptoms() {
+    if (!symptoms.trim() || checkingSymptoms) return;
+    setCheckingSymptoms(true);
+    setSymptomGuidance(null);
+    try {
+      const prompt = `A user is describing symptoms and wants general information, not a diagnosis. Age: ${
+        age.trim() || "not given"
+      }. Symptoms: ${symptoms.trim()}. Duration: ${duration.trim() || "not given"}. Additional notes: ${
+        additionalNotes.trim() || "none"
+      }. Give general, cautious information about what these symptoms could commonly relate to, and suggest one or two sensible next steps, such as a specific type of test or when to see a doctor. Be clear this is general information, not a diagnosis, and encourage seeing a doctor for anything serious or persistent. Keep it concise.`;
+      const reply = await sendAcademicMessage(prompt, []);
+      setSymptomGuidance(reply);
+    } catch (err) {
+      setSymptomGuidance("Couldn't reach the server just now, try again in a moment.");
+    } finally {
+      setCheckingSymptoms(false);
+    }
+  }
+
   function formatDose(iso: string) {
     const d = new Date(iso);
     return d.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -155,7 +223,7 @@ export default function HealthScreen() {
           <Feather name="heart" size={22} color={colors.plum} />
         </View>
         <Text style={styles.title}>Health</Text>
-        <Text style={styles.subtitle}>Cycle tracking and medication reminders.</Text>
+        <Text style={styles.subtitle}>Cycle tracking, medication reminders, and general health.</Text>
 
         <View style={styles.tabRow}>
           <Pressable style={[styles.tabButton, tab === "cycle" && styles.tabButtonActive]} onPress={() => setTab("cycle")}>
@@ -164,9 +232,12 @@ export default function HealthScreen() {
           <Pressable style={[styles.tabButton, tab === "medication" && styles.tabButtonActive]} onPress={() => setTab("medication")}>
             <Text style={[styles.tabLabel, tab === "medication" && styles.tabLabelActive]}>Medication</Text>
           </Pressable>
+          <Pressable style={[styles.tabButton, tab === "general" && styles.tabButtonActive]} onPress={() => setTab("general")}>
+            <Text style={[styles.tabLabel, tab === "general" && styles.tabLabelActive]}>General</Text>
+          </Pressable>
         </View>
 
-        {tab === "cycle" ? (
+        {tab === "cycle" && (
           <View>
             <Text style={styles.label}>First day of last period (YYYY-MM-DD)</Text>
             <TextInput
@@ -203,7 +274,7 @@ export default function HealthScreen() {
 
             {cycleResult && (
               <View style={styles.resultCard}>
-                <Text style={styles.resultMessage}>{cycleResult.message}</Text>
+                <Text style={styles.resultMessage}>{buildCycleNarrative(cycleResult.computed)}</Text>
                 <View style={styles.resultDivider} />
                 <CycleCalendar computed={cycleResult.computed} />
                 <View style={styles.resultDivider} />
@@ -228,7 +299,9 @@ export default function HealthScreen() {
               </View>
             )}
           </View>
-        ) : (
+        )}
+
+        {tab === "medication" && (
           <View>
             <Text style={styles.label}>Medication name</Text>
             <TextInput
@@ -322,6 +395,70 @@ export default function HealthScreen() {
             )}
           </View>
         )}
+
+        {tab === "general" && (
+          <PlusGate navigation={navigation}>
+            <View>
+              <Text style={styles.disclaimerText}>
+                This gives general information only, not a diagnosis. For anything serious, sudden,
+                or persistent, please see a doctor or clinic.
+              </Text>
+
+              <Text style={styles.label}>Age (optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={age}
+                onChangeText={setAge}
+                placeholder="e.g. 24"
+                placeholderTextColor={colors.inkSoft}
+                keyboardType="number-pad"
+              />
+
+              <Text style={styles.label}>What symptoms are you noticing?</Text>
+              <TextInput
+                style={styles.input}
+                value={symptoms}
+                onChangeText={setSymptoms}
+                placeholder="e.g. nausea in the mornings, tender breasts, missed period"
+                placeholderTextColor={colors.inkSoft}
+                multiline
+              />
+
+              <Text style={styles.label}>How long has this been going on?</Text>
+              <TextInput
+                style={styles.input}
+                value={duration}
+                onChangeText={setDuration}
+                placeholder="e.g. about a week"
+                placeholderTextColor={colors.inkSoft}
+              />
+
+              <Text style={styles.label}>Anything else worth mentioning? (optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={additionalNotes}
+                onChangeText={setAdditionalNotes}
+                placeholder="e.g. recent stress, medication changes"
+                placeholderTextColor={colors.inkSoft}
+                multiline
+              />
+
+              <Pressable style={styles.saveButton} onPress={checkSymptoms} disabled={checkingSymptoms}>
+                {checkingSymptoms ? (
+                  <ActivityIndicator color={colors.paper} size="small" />
+                ) : (
+                  <Text style={styles.saveLabel}>Get general guidance</Text>
+                )}
+              </Pressable>
+
+              {symptomGuidance && (
+                <View style={styles.resultCard}>
+                  <Text style={styles.resultMessage}>{symptomGuidance}</Text>
+                </View>
+              )}
+            </View>
+          </PlusGate>
+        )}
       </ScrollView>
     </View>
   );
@@ -386,6 +523,19 @@ const styles = StyleSheet.create({
   saveButton: { backgroundColor: colors.plum, borderRadius: radius.md, paddingVertical: space.md, alignItems: "center", marginTop: space.lg },
   saveLabel: { fontFamily: type.bodySemiBold, fontSize: 15, color: colors.paper },
   noteText: { fontFamily: type.body, fontSize: 12.5, color: colors.inkSoft, marginTop: space.sm, lineHeight: 17, fontStyle: "italic" },
+  disclaimerText: {
+    fontFamily: type.body,
+    fontSize: 12.5,
+    color: colors.inkSoft,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    padding: space.md,
+    marginBottom: space.md,
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
   resultDivider: { height: 1, backgroundColor: colors.line, marginVertical: space.md },
   calendarMonthLabel: { fontFamily: type.bodySemiBold, fontSize: 14, color: colors.ink, marginBottom: space.sm },
   calendarGrid: { flexDirection: "row", flexWrap: "wrap" },
