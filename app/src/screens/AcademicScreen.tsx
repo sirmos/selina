@@ -129,6 +129,9 @@ export default function AcademicScreen({ navigation }: any) {
   const [scholarshipGuidance, setScholarshipGuidance] = useState<Record<string, string>>({});
   const [loadingGuidance, setLoadingGuidance] = useState<string | null>(null);
   const [scholarshipSearch, setScholarshipSearch] = useState("");
+  const [customScholarshipQuery, setCustomScholarshipQuery] = useState("");
+  const [askingCustom, setAskingCustom] = useState(false);
+  const [customScholarshipAnswer, setCustomScholarshipAnswer] = useState<string | null>(null);
 
   // Planner tab state
   const [examName, setExamName] = useState("");
@@ -199,6 +202,22 @@ export default function AcademicScreen({ navigation }: any) {
       }));
     } finally {
       setLoadingGuidance(null);
+    }
+  }
+
+  async function askAboutCustomScholarship() {
+    const name = customScholarshipQuery.trim();
+    if (!name || askingCustom) return;
+    setAskingCustom(true);
+    setCustomScholarshipAnswer(null);
+    try {
+      const prompt = `Give practical, step by step guidance on how to prepare a strong application for the "${name}" scholarship. Cover eligibility basics, documents typically needed, and 2-3 tips to stand out. If you are not confident this scholarship exists under this exact name, say so clearly and suggest how the user could verify it. Keep it concise.`;
+      const reply = await sendAcademicMessage(prompt, []);
+      setCustomScholarshipAnswer(reply);
+    } catch (err) {
+      setCustomScholarshipAnswer("Couldn't reach the server just now, try again in a moment.");
+    } finally {
+      setAskingCustom(false);
     }
   }
 
@@ -430,6 +449,34 @@ export default function AcademicScreen({ navigation }: any) {
                 )}
               </View>
             ))}
+
+            <View style={styles.scholarshipCard}>
+              <Text style={styles.deadlineTitle}>Don't see it here?</Text>
+              <Text style={styles.deadlineMessage}>
+                Ask about any scholarship by name, national or international, and get guidance even if it's not in the list above.
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={customScholarshipQuery}
+                onChangeText={setCustomScholarshipQuery}
+                placeholder="e.g. Gates Cambridge Scholarship"
+                placeholderTextColor={colors.inkSoft}
+              />
+              <Pressable
+                style={styles.guidanceButton}
+                onPress={askAboutCustomScholarship}
+                disabled={askingCustom}
+              >
+                {askingCustom ? (
+                  <ActivityIndicator color={colors.paper} size="small" />
+                ) : (
+                  <Text style={styles.saveLabel}>Ask about this scholarship</Text>
+                )}
+              </Pressable>
+              {customScholarshipAnswer && (
+                <Text style={styles.guidanceText}>{customScholarshipAnswer}</Text>
+              )}
+            </View>
           </KeyboardAwareScrollView>
         </PlusGate>
       )}
