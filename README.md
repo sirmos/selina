@@ -2,6 +2,8 @@
 
 Selina is a multi-agent app built to support women through safety, health, work, education, and everyday life. It's dedicated to two women I lost during pregnancy and childbirth.
 
+Download a ready-to-install Android APK from the [latest release](https://github.com/sirmos/selina/releases/tag/v1.0-shipaton), no build steps needed to try the app.
+
 This repo holds two hackathon entries and the backend that powers both:
 
 selina/
