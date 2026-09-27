@@ -38,8 +38,8 @@ jobs:
             const fs = require('fs');
             const path = 'android/app/build.gradle';
             let content = fs.readFileSync(path, 'utf8');
-            if (!content.includes('bundleInDebug')) {
-              content = content.replace(/react\s*\{/, 'react {\n    bundleInDebug = true');
+            if (!content.includes('debuggableVariants')) {
+              content = content.replace(/react\s*\{/, 'react {\n    debuggableVariants = []');
             }
             fs.writeFileSync(path, content);
           "
