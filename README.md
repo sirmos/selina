@@ -7,8 +7,8 @@ Download a ready-to-install Android APK from the [latest release](https://github
 This repo holds two hackathon entries and the backend that powers both:
 
 selina/
-  app/        Mobile app (React Native, Expo) — RevenueCat Shipaton 2026 entry
-  vision/     OpenCV 5 safety pipeline — OpenCV AI Competition 2026 entry
+  app/        Mobile app (React Native, Expo) - RevenueCat Shipaton 2026 entry
+  vision/     OpenCV 5 safety pipeline - OpenCV AI Competition 2026 entry
   backend/    Shared multi-agent orchestrator used by both entries above
   docs/       Proposals and supporting notes
 
@@ -47,15 +47,15 @@ If you'd rather point the app at the already-deployed backend instead of running
 
     EXPO_PUBLIC_API_URL=https://selina-cvoe.onrender.com
 
-## app/ — RevenueCat Shipaton 2026 (Next Gen Award)
+## app/ - RevenueCat Shipaton 2026 (Next Gen Award)
 
 A home dashboard, a Companion chat, a Safety check-in flow, a Rights & Support case timeline, and Academic tools including scholarship guidance and study planning. Selina Plus, a subscription tier powered by RevenueCat, unlocks the deeper features. See `app/README.md` for more detail.
 
-## vision/ — OpenCV AI Competition 2026 (powered by AWS)
+## vision/ - OpenCV AI Competition 2026 (powered by AWS)
 
 An OpenCV 5 pipeline that takes a submitted photo or video and turns it into structured, privacy-protected safety evidence, then decides what the Safety agent should do with it. See `vision/README.md` for setup and current status.
 
-## backend/ — shared reasoning layer
+## backend/ - shared reasoning layer
 
 The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on real reasoning through Groq by default, with a built-in mock provider as an offline fallback if that connection is ever unavailable. See `backend/README.md`.
 
