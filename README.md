@@ -7,10 +7,15 @@ Download a ready-to-install Android APK from the [latest release](https://github
 This repo holds two hackathon entries and the backend that powers both:
 
 selina/
+
   app/        Mobile app (React Native, Expo) - RevenueCat Shipaton 2026 entry
+  
   vision/     OpenCV 5 safety pipeline - OpenCV AI Competition 2026 entry
+  
   backend/    Shared multi-agent orchestrator used by both entries above
+  
   docs/       Proposals and supporting notes
+  
 
 ## Running the backend
 
