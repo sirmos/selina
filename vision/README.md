@@ -1,9 +1,8 @@
 # Selina Vision, OpenCV 5 safety evidence pipeline
 
 The computer vision core of Selina's OpenCV AI Competition 2026 entry,
-Agentic Vision path. This is a real, working pipeline, not a placeholder,
-it has been run end to end against synthetic test media and behaves
-correctly, see Verified behavior below.
+Agentic Vision path. It runs end to end on OpenCV 5.0.0 and has been tested
+on synthetic media and one real photo, see Verified behavior below.
 
 ## What it does
 
@@ -12,82 +11,80 @@ This pipeline:
 
 1. Checks whether the submission is usable (not too dark, not too bright,
    not too blurry), and asks for a retake if not.
-2. Blurs every face in the frame that is detected, before anything is
-   stored or shared further, to protect bystanders and other third parties.
+2. Blurs every face it detects before anything is stored or shared, to
+   protect bystanders and other third parties.
 3. For video, scans for sudden or repeated movement (camera shake, in
-   effect) and flags it as worth a closer look, this is a prioritization
+   effect) and flags it as worth a closer look. This is a prioritization
    signal for a human reviewer, not a claim about what happened.
 4. Pulls one clear key frame out of a video clip for the incident record.
 5. Returns a next action for the Safety Agent (add to timeline, raise
-   priority for review, or request a retake), which is the step that makes
-   this an agentic vision workflow rather than a chatbot describing a fixed
-   result: the vision output changes what happens next.
+   priority for review, or request a retake). The vision output changes
+   what happens next, which is what makes this an agentic workflow.
 
 ## Setup
 
+Python 3.12.
+
 ```
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-A note on the OpenCV version: this was built and verified against the
-OpenCV build available during development (4.13). The competition
-requires OpenCV 5. The API used throughout (CascadeClassifier, Laplacian,
-calcOpticalFlowFarneback) is stable across both, but reinstall against the
-actual OpenCV 5 release and rerun the test suite below before final
-submission, do not assume it carries over untested.
+Dependencies are pinned: `opencv-python-headless==5.0.0.93`, `numpy==2.5.4`.
+
+Face detection uses the YuNet model through `cv2.FaceDetectorYN`. The Haar
+cascade classifier is not in the OpenCV 5 main package, so it is not used.
+Download the model once:
+
+```
+curl -L -o selina_vision/models/face_detection_yunet_2023mar.onnx https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
+```
+
+OpenCV prints a "Targets are not supported by the new graph engine" warning
+when the detector loads. It is harmless.
 
 ## Running it
 
-Generate synthetic sample media, since this repo intentionally contains no
-real incident footage, then run the pipeline against it:
+Generate synthetic sample media (the repo contains no real incident
+footage), then run the tests:
 
 ```
 python tests/make_sample_data.py
 python tests/test_pipeline.py
 ```
 
+If a `face.png` photo is in the `vision` folder, the test also checks that
+the face gets blurred. The file is git-ignored. Without it, that check is skipped.
+
 ## Verified behavior
 
-Running `test_pipeline.py` against the generated samples currently produces:
+Run on OpenCV 5.0.0.93:
 
 | Sample | Quality result | Action returned |
 |---|---|---|
-| Sharp photo, two faces | Usable | `add_to_timeline`, both faces blurred |
+| Sharp synthetic photo (no faces) | Usable | `add_to_timeline`, 0 faces blurred |
 | Blurry photo | Flagged, too blurry | `request_retake` |
 | Dark photo | Flagged, too dark | `request_retake` |
 | Video with a shake burst | Usable key frame | `raise_priority_for_review`, motion flagged |
+| Real portrait photo (1024x1536) | Usable | `add_to_timeline`, 1 face blurred |
 
-This confirms the core claim for the Agentic Vision path: the vision
-output genuinely changes the next action, a good frame is filed, a bad one
-is bounced back, and a suspicious clip is escalated in priority.
+## Known limitations
+
+- Large photos are shrunk to 640 px on the long side before face detection.
+  At full size the detector missed the face on the test photo. Boxes are
+  scaled back up before blurring.
+- The detection threshold is 0.6. Lower catches more faces but blurs more
+  false ones. Small, side-on, masked or heavily shadowed faces can still be
+  missed. A missed face is a privacy failure, so a human reviews every
+  result before anything is shared.
+- Thresholds for blur, brightness and motion were tuned on synthetic
+  samples and one portrait. They need checking on real phone footage.
+- Motion analysis uses frame differencing. It flags camera shake, it does
+  not know what caused it.
 
 ## Deploying on AWS
 
-This module is written to run inside a container on AWS Graviton (EC2 or
-Lambda), see the AWS Compute Grant proposal for the full architecture.
 `selina_vision/lambda_handler.py` wraps `process_image` and `process_video`
-for that deployment, and `Dockerfile` builds an arm64 Lambda container
-image.
-
-Honest status on the Lambda handler: it has not been run against a real
-Lambda runtime or a real S3 bucket, `boto3` is not available in the
-environment this was built in, so it could not be executed here. The
-pipeline logic it wraps (`selina_vision.pipeline`) is fully tested, see
-Verified behavior above, but the AWS-facing wrapper itself needs a real
-test run with actual credentials before you trust it for the demo, budget
-time for that.
-
-## What still needs doing
-
-- Swap the Haar cascade face detector for a more robust model if time
-  allows, it works but is a dated method, a DNN-based detector would be
-  more reliable on real, varied footage.
-- Recalibrate `BLUR_VARIANCE_THRESHOLD`, `DARK_MEAN_THRESHOLD`, and
-  `MOTION_FLAG_THRESHOLD` in `pipeline.py` against real phone camera
-  footage, the current values are tuned against synthetic samples.
-- Test `lambda_handler.py` against a real Lambda runtime and S3 bucket,
-  this has not been run, only written.
-- Connect `evidence_to_action` output into the Safety Agent, this is
-  already done on the backend side, see `backend/agents/safety_agent.py`
-  and `backend/README.md` for how the two connect.
-- Reinstall against OpenCV 5 specifically and rerun `test_pipeline.py`.
+for an arm64 Lambda container image (`Dockerfile`). The handler has not yet
+been run on a Lambda runtime or S3 bucket.

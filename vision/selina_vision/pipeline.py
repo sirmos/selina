@@ -33,6 +33,11 @@ FACE_DETECTOR_MODEL_PATH = os.environ.get(
     str(Path(__file__).parent / "models" / "face_detection_yunet_2023mar.onnx"),
 )
 
+# Face detection settings. Big photos are shrunk to this before detecting.
+DETECT_MAX_SIDE = 640
+# Lower catches more faces but blurs more false ones.
+FACE_SCORE_THRESHOLD = 0.6
+
 # Thresholds, tuned to be conservative rather than clever. False negatives
 # (missing a real problem) are worse than false positives here, since a
 # human always reviews the result before anything is shared or escalated.
@@ -101,7 +106,10 @@ def check_quality(image: np.ndarray) -> QualityReport:
 def blur_faces(image: np.ndarray, output_path: str) -> FaceBlurResult:
     """Detect faces and blur them before anything leaves the pipeline, so
     bystanders and other third parties are not exposed. This runs on every
-    submission, there is no option to skip it."""
+    submission, there is no option to skip it.
+
+    Large photos are shrunk before detection, because the detector misses
+    faces on full size phone images. Boxes are scaled back up afterwards."""
     if not Path(FACE_DETECTOR_MODEL_PATH).exists():
         raise FileNotFoundError(
             f"Face detection model not found at {FACE_DETECTOR_MODEL_PATH}. "
@@ -110,22 +118,34 @@ def blur_faces(image: np.ndarray, output_path: str) -> FaceBlurResult:
         )
 
     height, width = image.shape[:2]
-    detector = cv2.FaceDetectorYN.create(FACE_DETECTOR_MODEL_PATH, "", (width, height))
-    _, faces = detector.detect(image)
+    scale = min(1.0, DETECT_MAX_SIDE / max(height, width))
+    if scale < 1.0:
+        small = cv2.resize(
+            image, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_AREA
+        )
+    else:
+        small = image
+    small_h, small_w = small.shape[:2]
+
+    detector = cv2.FaceDetectorYN.create(
+        FACE_DETECTOR_MODEL_PATH, "", (small_w, small_h), score_threshold=FACE_SCORE_THRESHOLD
+    )
+    _, faces = detector.detect(small)
 
     output = image.copy()
     faces_blurred = 0
 
     if faces is not None:
         for face in faces:
-            x, y, w, h = face[:4].astype(int)
-            x, y = max(x, 0), max(y, 0)
-            w, h = max(w, 1), max(h, 1)
-            region = output[y:y + h, x:x + w]
+            x, y, w, h = (face[:4] / scale).astype(int)
+            pad_x, pad_y = int(w * 0.15), int(h * 0.15)
+            x0, y0 = max(x - pad_x, 0), max(y - pad_y, 0)
+            x1, y1 = min(x + w + pad_x, width), min(y + h + pad_y, height)
+            region = output[y0:y1, x0:x1]
             if region.size == 0:
                 continue
-            blurred = cv2.GaussianBlur(region, (51, 51), 30)
-            output[y:y + h, x:x + w] = blurred
+            k = max(51, (max(x1 - x0, y1 - y0) // 3) | 1)
+            output[y0:y1, x0:x1] = cv2.GaussianBlur(region, (k, k), 0)
             faces_blurred += 1
 
     cv2.imwrite(output_path, output)

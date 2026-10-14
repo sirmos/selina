@@ -3,3 +3,9 @@ __pycache__/
 pipeline_output/
 sample_data/
 .DS_Store
+
+face.png
+debug_face.py
+pipeline_output/
+
+.venv/
