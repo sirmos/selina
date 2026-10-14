@@ -47,6 +47,11 @@
       <div class="card"><strong>Your upload (stays on this device)</strong><img id="before" alt=""></div>
       <div class="card"><strong>After the pipeline</strong><img id="after" alt=""><div id="noafter" class="note" hidden>No image returned. Nothing is kept when a retake is requested.</div></div>
     </div>
+    <div class="card" id="agentcard" hidden>
+      <strong>Safety Agent</strong>
+      <div id="agentdecision" class="action"></div>
+      <p id="agentmsg"></p>
+    </div>
     <div class="card"><table id="facts"></table></div>
   </div>
 </main>
@@ -73,7 +78,7 @@ function shrinkImage(file, maxSide) {
 go.addEventListener('click', async () => {
   const file = fileEl.files[0];
   if (!file) return;
-  go.disabled = true; go.textContent = 'Working...';
+  go.disabled = true; go.textContent = 'Working (the Safety Agent can take up to a minute to wake)...';
   try {
     const isVideo = file.type.startsWith('video/');
     if (isVideo && file.size > 4 * 1024 * 1024) throw new Error('Video is over 4 MB. Use a shorter clip.');
@@ -105,6 +110,15 @@ function show(d, file, isVideo) {
   const none = document.getElementById('noafter');
   if (d.blurred_image_b64) { after.src = 'data:image/jpeg;base64,' + d.blurred_image_b64; after.hidden = false; none.hidden = true; }
   else { after.hidden = true; none.hidden = false; }
+
+  const ag = d.safety_agent;
+  const agentCard = document.getElementById('agentcard');
+  agentCard.hidden = !ag;
+  if (ag) {
+    const dec = { ask_retake: 'Asks for a retake', offer_escalation: 'Checks in and offers to contact her emergency contact', file_evidence: 'Files the evidence' }[ag.agent_decision] || (ag.error ? 'No answer' : '');
+    document.getElementById('agentdecision').textContent = dec;
+    document.getElementById('agentmsg').textContent = ag.message || ag.error || '';
+  }
 
   const rows = [
     ['Usable', d.quality.is_usable ? 'yes' : 'no' + (d.quality.reason ? ' (' + d.quality.reason + ')' : '')],

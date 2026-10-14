@@ -12,6 +12,7 @@ import base64
 import json
 import os
 import tempfile
+import urllib.request
 import uuid
 
 import cv2
@@ -19,6 +20,10 @@ import cv2
 from selina_vision.pipeline import process_image, process_video, evidence_to_action
 
 RESULTS_BUCKET = os.environ.get("SELINA_EVIDENCE_BUCKET", "")
+# Selina backend (Safety Agent). When set, the vision result is sent on as an
+# evidence_processed event and the agent's decision is returned with it.
+BACKEND_URL = os.environ.get("SELINA_BACKEND_URL", "").rstrip("/")
+BACKEND_TIMEOUT = 45  # the free backend host can take a while to wake up
 PREVIEW_MAX_SIDE = 900
 
 _PAGE_PATH = os.path.join(os.path.dirname(__file__), "upload_page.html")
@@ -92,12 +97,34 @@ def handler(event, context):
                 ),
                 "notes": result.notes,
                 "next_action": action,
+                "safety_agent": _ask_safety_agent(action, stored_key),
                 "stored_key": stored_key,
                 "blurred_image_b64": _preview(output_path),
             })
 
     except Exception as exc:  # noqa: BLE001, a Lambda handler should not crash the invocation
         return _response(500, {"error": str(exc)})
+
+
+def _ask_safety_agent(action, stored_key):
+    """Hand the vision result to the Safety Agent and return what it decided.
+    The Lambda temp path in the action means nothing to the backend, so it is
+    swapped for the stored key (or dropped). A failure here never breaks the
+    vision result, it is reported back instead."""
+    if not BACKEND_URL:
+        return None
+    evidence_action = {k: v for k, v in action.items() if k != "evidence_path"}
+    if stored_key:
+        evidence_action["evidence_path"] = stored_key
+    payload = json.dumps({"type": "evidence_processed", "evidence_action": evidence_action}).encode()
+    req = urllib.request.Request(
+        f"{BACKEND_URL}/event", data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=BACKEND_TIMEOUT) as resp:
+            return json.loads(resp.read().decode())
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"Safety Agent unreachable: {exc}"}
 
 
 def _preview(path):
