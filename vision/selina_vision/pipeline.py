@@ -103,13 +103,56 @@ def check_quality(image: np.ndarray) -> QualityReport:
     return QualityReport(True, blur_variance, mean_brightness, None)
 
 
+def _detect(small: np.ndarray) -> list:
+    """Run the face detector once on an image, return a list of (x, y, w, h)."""
+    h, w = small.shape[:2]
+    detector = cv2.FaceDetectorYN.create(
+        FACE_DETECTOR_MODEL_PATH, "", (w, h), score_threshold=FACE_SCORE_THRESHOLD
+    )
+    _, faces = detector.detect(small)
+    return [] if faces is None else [f[:4] for f in faces]
+
+
+def _unrotate(box, code, w: int, h: int) -> np.ndarray:
+    """Map a box found in a rotated copy of a w x h image back onto the
+    original image."""
+    xr, yr, bw, bh = [float(v) for v in box]
+    corners = [(xr, yr), (xr + bw, yr + bh)]
+    if code == cv2.ROTATE_180:
+        pts = [(w - x, h - y) for x, y in corners]
+    elif code == cv2.ROTATE_90_CLOCKWISE:
+        pts = [(y, h - x) for x, y in corners]
+    else:  # ROTATE_90_COUNTERCLOCKWISE
+        pts = [(w - y, x) for x, y in corners]
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return np.array([min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)])
+
+
+def _detect_any_orientation(small: np.ndarray) -> list:
+    """Look for faces upright first. If none are found, try the image
+    rotated three ways, since a photo can arrive sideways or upside down
+    (missing or wrong orientation data) and the detector only finds upright
+    faces. A missed face is a privacy failure, so the extra passes are worth
+    the small cost."""
+    boxes = _detect(small)
+    if boxes:
+        return boxes
+    h, w = small.shape[:2]
+    for code in (cv2.ROTATE_180, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE):
+        found = _detect(cv2.rotate(small, code))
+        if found:
+            return [_unrotate(b, code, w, h) for b in found]
+    return []
+
+
 def blur_faces(image: np.ndarray, output_path: str) -> FaceBlurResult:
     """Detect faces and blur them before anything leaves the pipeline, so
     bystanders and other third parties are not exposed. This runs on every
     submission, there is no option to skip it.
 
     Large photos are shrunk before detection, because the detector misses
-    faces on full size phone images. Boxes are scaled back up afterwards."""
+    faces on full size phone images. Boxes are scaled back up afterwards.
+    If no upright face is found, rotated copies are tried as well."""
     if not Path(FACE_DETECTOR_MODEL_PATH).exists():
         raise FileNotFoundError(
             f"Face detection model not found at {FACE_DETECTOR_MODEL_PATH}. "
@@ -125,28 +168,22 @@ def blur_faces(image: np.ndarray, output_path: str) -> FaceBlurResult:
         )
     else:
         small = image
-    small_h, small_w = small.shape[:2]
 
-    detector = cv2.FaceDetectorYN.create(
-        FACE_DETECTOR_MODEL_PATH, "", (small_w, small_h), score_threshold=FACE_SCORE_THRESHOLD
-    )
-    _, faces = detector.detect(small)
+    boxes = _detect_any_orientation(small)
 
     output = image.copy()
     faces_blurred = 0
-
-    if faces is not None:
-        for face in faces:
-            x, y, w, h = (face[:4] / scale).astype(int)
-            pad_x, pad_y = int(w * 0.15), int(h * 0.15)
-            x0, y0 = max(x - pad_x, 0), max(y - pad_y, 0)
-            x1, y1 = min(x + w + pad_x, width), min(y + h + pad_y, height)
-            region = output[y0:y1, x0:x1]
-            if region.size == 0:
-                continue
-            k = max(51, (max(x1 - x0, y1 - y0) // 3) | 1)
-            output[y0:y1, x0:x1] = cv2.GaussianBlur(region, (k, k), 0)
-            faces_blurred += 1
+    for box in boxes:
+        x, y, w, h = (np.asarray(box, dtype=float) / scale).astype(int)
+        pad_x, pad_y = int(w * 0.15), int(h * 0.15)
+        x0, y0 = max(x - pad_x, 0), max(y - pad_y, 0)
+        x1, y1 = min(x + w + pad_x, width), min(y + h + pad_y, height)
+        region = output[y0:y1, x0:x1]
+        if region.size == 0:
+            continue
+        k = max(51, (max(x1 - x0, y1 - y0) // 3) | 1)
+        output[y0:y1, x0:x1] = cv2.GaussianBlur(region, (k, k), 0)
+        faces_blurred += 1
 
     cv2.imwrite(output_path, output)
     return FaceBlurResult(output_path, faces_blurred)
