@@ -4,18 +4,15 @@ Selina is a multi-agent app built to support women through safety, health, work,
 
 Download a ready-to-install Android APK from the [latest release](https://github.com/sirmos/selina/releases/tag/v1.0-shipaton), no build steps needed to try the app.
 
-This repo holds two hackathon entries and the backend that powers both:
+This repo holds a mobile app, an OpenCV vision pipeline, and the backend that powers both:
 
+```
 selina/
-
-  app/        Mobile app (React Native, Expo) - RevenueCat Shipaton 2026 entry
-  
-  vision/     OpenCV 5 safety pipeline - OpenCV AI Competition 2026 entry
-  
-  backend/    Shared multi-agent orchestrator used by both entries above
-  
+  app/        Mobile app (React Native, Expo)
+  vision/     OpenCV 5 safety evidence pipeline, deployed on AWS Lambda
+  backend/    Multi-agent orchestrator used by both
   docs/       Proposals and supporting notes
-  
+```
 
 ## Running the backend
 
@@ -37,10 +34,6 @@ The app is built with React Native and Expo.
 Create a `.env` file in `app/` with:
 
     EXPO_PUBLIC_API_URL=http://localhost:5000
-    EXPO_PUBLIC_RC_IOS_KEY=your_revenuecat_ios_key
-    EXPO_PUBLIC_RC_ANDROID_KEY=your_revenuecat_android_key
-
-For testing purchases without a paid Apple or Google developer account, use a RevenueCat Test Store key for both values, available free from your own RevenueCat project.
 
 Then start the app:
 
@@ -52,18 +45,22 @@ If you'd rather point the app at the already-deployed backend instead of running
 
     EXPO_PUBLIC_API_URL=https://selina-cvoe.onrender.com
 
-## app/ - RevenueCat Shipaton 2026 (Next Gen Award)
+## app/ - mobile app
 
-A home dashboard, a Companion chat, a Safety check-in flow, a Rights & Support case timeline, and Academic tools including scholarship guidance and study planning. Selina Plus, a subscription tier powered by RevenueCat, unlocks the deeper features. See `app/README.md` for more detail.
+A home dashboard, a Companion chat, a Safety check-in flow, a Rights & Support case timeline, and Academic tools including scholarship guidance and study planning. See `app/README.md` for more detail.
 
 ## vision/ - OpenCV AI Competition 2026 (powered by AWS)
 
-An OpenCV 5 pipeline that takes a submitted photo or video and turns it into structured, privacy-protected safety evidence, then decides what the Safety agent should do with it. See `vision/README.md` for setup and current status.
+An OpenCV 5 pipeline that takes a submitted photo or video and turns it into structured, privacy-protected safety evidence, then decides what the Safety Agent should do with it. It checks quality, blurs faces, flags sudden movement in video, and returns a next action: ask for a retake, raise priority, or file it.
+
+It runs as a container on AWS Lambda. Try it here: https://poahahsvpz75pryep76avzuxxm0notan.lambda-url.us-east-1.on.aws/
+
+On a 160-file test set it chose the correct next action 157 times and blurred 95 of 100 faces, with no false blurs. See `vision/README.md` for setup, results and known failures.
 
 ## backend/ - shared reasoning layer
 
-The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on real reasoning through Groq by default, with a built-in mock provider as an offline fallback if that connection is ever unavailable. See `backend/README.md`.
+The Life Orchestrator and nine specialist agents: Safety, Health, Companion, Welfare, Rights and Support, Academic, Career, Financial, and Opportunity. It runs on Groq by default, with a built-in mock provider as an offline fallback if that connection is ever unavailable. The Safety Agent takes the vision pipeline's result and decides what to do next. See `backend/README.md`.
 
 ## Status
 
-Actively building `app/` and `vision/`. `backend/` is functionally complete for what both entries need from it.
+Actively building `app/` and `vision/`. `backend/` is functionally complete for what both need from it.
